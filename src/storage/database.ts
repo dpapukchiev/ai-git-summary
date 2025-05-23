@@ -115,8 +115,19 @@ export class DatabaseManager {
 
   // Commit operations
   addCommit(commit: Omit<Commit, "id">): number {
+    // First check if commit already exists
+    const existingStmt = this.db.prepare(`
+      SELECT id FROM commits WHERE repo_id = ? AND hash = ?
+    `);
+    const existing = existingStmt.get(commit.repoId, commit.hash) as any;
+
+    if (existing) {
+      return existing.id;
+    }
+
+    // Insert new commit
     const stmt = this.db.prepare(`
-      INSERT OR IGNORE INTO commits 
+      INSERT INTO commits 
       (repo_id, hash, author, email, date, message, files_changed, insertions, deletions, branch)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);

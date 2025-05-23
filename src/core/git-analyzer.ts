@@ -127,9 +127,16 @@ export class GitAnalyzer {
 
       for (const branch of branchesToCheck) {
         try {
+          // Build git log arguments
+          const logArgs: string[] = ["--max-count=1000"];
+
+          if (since) {
+            logArgs.push(`--since=${since.toISOString()}`);
+          }
+
+          logArgs.push(branch);
+
           const options: any = {
-            maxCount: 1000, // Limit to prevent memory issues
-            from: branch,
             format: {
               hash: "%H",
               date: "%ai",
@@ -140,11 +147,7 @@ export class GitAnalyzer {
             },
           };
 
-          if (since) {
-            options.since = since.toISOString();
-          }
-
-          const log = await git.log(options);
+          const log = await git.log(logArgs, options);
 
           // Deduplicate commits by hash and add to collection
           for (const commit of log.all) {
@@ -164,8 +167,14 @@ export class GitAnalyzer {
 
       // Fallback to original behavior if branch detection fails
       try {
+        // Build git log arguments for fallback
+        const logArgs: string[] = ["--max-count=1000"];
+
+        if (since) {
+          logArgs.push(`--since=${since.toISOString()}`);
+        }
+
         const options: any = {
-          maxCount: 1000,
           format: {
             hash: "%H",
             date: "%ai",
@@ -176,11 +185,7 @@ export class GitAnalyzer {
           },
         };
 
-        if (since) {
-          options.from = since.toISOString();
-        }
-
-        const log = await git.log(options);
+        const log = await git.log(logArgs, options);
         return log.all;
       } catch (fallbackError) {
         console.error("Fallback commit fetch also failed:", fallbackError);
@@ -211,12 +216,27 @@ export class GitAnalyzer {
         deletions: stats.deletions,
       });
 
+      // Validate commitId before proceeding
+      if (!commitId || commitId <= 0) {
+        throw new Error(
+          `Failed to add commit ${logEntry.hash} - invalid commit ID: ${commitId}`
+        );
+      }
+
       // Save file changes
       for (const fileChange of stats.fileChanges) {
-        this.db.addFileChange({
-          commitId,
-          ...fileChange,
-        });
+        try {
+          this.db.addFileChange({
+            commitId,
+            ...fileChange,
+          });
+        } catch (fileChangeError) {
+          console.error(
+            `Error adding file change for commit ${logEntry.hash}, file ${fileChange.filePath}:`,
+            fileChangeError
+          );
+          // Continue processing other file changes
+        }
       }
     } catch (error) {
       console.error(`Error processing commit ${logEntry.hash}:`, error);
