@@ -170,11 +170,11 @@ export function printMarkdownSummary(summary: any) {
     console.log("## 📁 Repository Activity\n");
     for (const repo of summary.repositories) {
       const repoCommits = summary.commits
-        ? summary.commits.filter((c: any) => c.repositoryId === repo.id).length
+        ? summary.commits.filter((c: any) => c.repoId === repo.id).length
         : 0;
       const repoLines = summary.commits
         ? summary.commits
-            .filter((c: any) => c.repositoryId === repo.id)
+            .filter((c: any) => c.repoId === repo.id)
             .reduce(
               (sum: number, c: any) => sum + c.insertions + c.deletions,
               0

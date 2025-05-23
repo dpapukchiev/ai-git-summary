@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { DataAggregator } from "../../core/data-aggregator";
 import { DateUtils } from "../../utils/date-utils";
+import { GitUtils } from "../../utils/git-utils";
 import { PeriodType } from "../../types";
 import { formatSummary, OutputFormat } from "../../formatters";
 
@@ -31,6 +32,8 @@ export function addSummaryCommands(
         "Output format (text, json, markdown)",
         "text"
       )
+      .option("-a, --author <author>", "Filter commits by author name or email")
+      .option("--me", "Filter commits by current git user")
       .option("-v, --verbose", "Verbose output")
       .action(async (options) => {
         try {
@@ -38,10 +41,27 @@ export function addSummaryCommands(
             console.log(`📊 Generating ${description.toLowerCase()}...`);
           }
 
+          // Handle author filtering
+          let author = options.author;
+          if (options.me) {
+            const currentUser = GitUtils.getCurrentUser();
+            if (!currentUser) {
+              console.error(
+                "❌ Could not determine current git user. Please set git config user.name or user.email"
+              );
+              process.exit(1);
+            }
+            author = currentUser;
+            if (options.verbose) {
+              console.log(`🔍 Filtering commits by current user: ${author}`);
+            }
+          }
+
           const timePeriod = DateUtils.getPeriod(period);
           const summary = await dataAggregator.generateWorkSummary(
             timePeriod,
-            options.repos
+            options.repos,
+            author
           );
 
           formatSummary(
@@ -68,6 +88,8 @@ export function addSummaryCommands(
       "Output format (text, json, markdown)",
       "text"
     )
+    .option("-a, --author <author>", "Filter commits by author name or email")
+    .option("--me", "Filter commits by current git user")
     .option("-v, --verbose", "Verbose output")
     .action(async (options) => {
       try {
@@ -90,10 +112,27 @@ export function addSummaryCommands(
           );
         }
 
+        // Handle author filtering
+        let author = options.author;
+        if (options.me) {
+          const currentUser = GitUtils.getCurrentUser();
+          if (!currentUser) {
+            console.error(
+              "❌ Could not determine current git user. Please set git config user.name or user.email"
+            );
+            process.exit(1);
+          }
+          author = currentUser;
+          if (options.verbose) {
+            console.log(`🔍 Filtering commits by current user: ${author}`);
+          }
+        }
+
         const timePeriod = DateUtils.getPeriod("1week", startDate, endDate); // Using custom dates
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
-          options.repos
+          options.repos,
+          author
         );
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);

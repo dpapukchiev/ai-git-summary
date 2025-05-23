@@ -11,7 +11,8 @@ export class DataAggregator {
 
   async generateWorkSummary(
     period: TimePeriod,
-    repositoryPaths?: string[]
+    repositoryPaths?: string[],
+    author?: string
   ): Promise<WorkSummary> {
     // Get repositories to analyze
     let repositories = this.db.getAllRepositories();
@@ -33,7 +34,8 @@ export class DataAggregator {
     const commits = this.db.getCommitsByDateRange(
       period.startDate,
       period.endDate,
-      repoIds
+      repoIds,
+      author
     );
 
     // Generate statistics
@@ -188,7 +190,8 @@ export class DataAggregator {
 
   async getCommitTrends(
     period: TimePeriod,
-    repositoryPaths?: string[]
+    repositoryPaths?: string[],
+    author?: string
   ): Promise<Map<string, number>> {
     let repositories = this.db.getAllRepositories();
 
@@ -204,7 +207,8 @@ export class DataAggregator {
     const commits = this.db.getCommitsByDateRange(
       period.startDate,
       period.endDate,
-      repoIds
+      repoIds,
+      author
     );
 
     return DateUtils.getCommitsByDay(commits);
@@ -212,7 +216,8 @@ export class DataAggregator {
 
   async getAuthorStats(
     period: TimePeriod,
-    repositoryPaths?: string[]
+    repositoryPaths?: string[],
+    author?: string
   ): Promise<
     Array<{
       author: string;
@@ -235,7 +240,8 @@ export class DataAggregator {
     const commits = this.db.getCommitsByDateRange(
       period.startDate,
       period.endDate,
-      repoIds
+      repoIds,
+      author
     );
 
     const authorStats = new Map<

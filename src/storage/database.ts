@@ -1,26 +1,26 @@
-import Database from 'better-sqlite3';
-import path from 'path';
-import fs from 'fs';
-import { Repository, Commit, FileChange, CachedSummary } from '../types';
+import Database from "better-sqlite3";
+import path from "path";
+import fs from "fs";
+import { Repository, Commit, FileChange, CachedSummary } from "../types";
 
 export class DatabaseManager {
   private db: Database.Database;
   private dbPath: string;
 
-  constructor(dataDir: string = './data') {
+  constructor(dataDir: string = "./data") {
     // Ensure data directory exists
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    this.dbPath = path.join(dataDir, 'git-summary.db');
+    this.dbPath = path.join(dataDir, "git-summary.db");
     this.db = new Database(this.dbPath);
     this.setupSchema();
   }
 
   private setupSchema(): void {
     // Enable foreign keys
-    this.db.pragma('foreign_keys = ON');
+    this.db.pragma("foreign_keys = ON");
 
     // Create tables
     this.db.exec(`
@@ -80,34 +80,41 @@ export class DatabaseManager {
   }
 
   // Repository operations
-  addRepository(repo: Omit<Repository, 'id'>): number {
+  addRepository(repo: Omit<Repository, "id">): number {
     const stmt = this.db.prepare(`
       INSERT INTO repositories (name, path, remote_url, weight)
       VALUES (?, ?, ?, ?)
     `);
-    const result = stmt.run(repo.name, repo.path, repo.remoteUrl || null, repo.weight || 1.0);
+    const result = stmt.run(
+      repo.name,
+      repo.path,
+      repo.remoteUrl || null,
+      repo.weight || 1.0
+    );
     return result.lastInsertRowid as number;
   }
 
   getRepository(path: string): Repository | null {
-    const stmt = this.db.prepare('SELECT * FROM repositories WHERE path = ?');
+    const stmt = this.db.prepare("SELECT * FROM repositories WHERE path = ?");
     const row = stmt.get(path) as any;
     return row ? this.mapRepository(row) : null;
   }
 
   getAllRepositories(): Repository[] {
-    const stmt = this.db.prepare('SELECT * FROM repositories ORDER BY name');
+    const stmt = this.db.prepare("SELECT * FROM repositories ORDER BY name");
     const rows = stmt.all() as any[];
     return rows.map(this.mapRepository);
   }
 
   updateRepositoryLastSynced(repoId: number, date: Date): void {
-    const stmt = this.db.prepare('UPDATE repositories SET last_synced = ? WHERE id = ?');
+    const stmt = this.db.prepare(
+      "UPDATE repositories SET last_synced = ? WHERE id = ?"
+    );
     stmt.run(date.toISOString(), repoId);
   }
 
   // Commit operations
-  addCommit(commit: Omit<Commit, 'id'>): number {
+  addCommit(commit: Omit<Commit, "id">): number {
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO commits 
       (repo_id, hash, author, email, date, message, files_changed, insertions, deletions, branch)
@@ -128,37 +135,51 @@ export class DatabaseManager {
     return result.lastInsertRowid as number;
   }
 
-  getCommitsByRepository(repoId: number, startDate?: Date, endDate?: Date): Commit[] {
-    let query = 'SELECT * FROM commits WHERE repo_id = ?';
+  getCommitsByRepository(
+    repoId: number,
+    startDate?: Date,
+    endDate?: Date
+  ): Commit[] {
+    let query = "SELECT * FROM commits WHERE repo_id = ?";
     const params: any[] = [repoId];
 
     if (startDate) {
-      query += ' AND date >= ?';
+      query += " AND date >= ?";
       params.push(startDate.toISOString());
     }
 
     if (endDate) {
-      query += ' AND date <= ?';
+      query += " AND date <= ?";
       params.push(endDate.toISOString());
     }
 
-    query += ' ORDER BY date DESC';
+    query += " ORDER BY date DESC";
 
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as any[];
     return rows.map(this.mapCommit);
   }
 
-  getCommitsByDateRange(startDate: Date, endDate: Date, repoIds?: number[]): Commit[] {
-    let query = 'SELECT * FROM commits WHERE date >= ? AND date <= ?';
+  getCommitsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    repoIds?: number[],
+    author?: string
+  ): Commit[] {
+    let query = "SELECT * FROM commits WHERE date >= ? AND date <= ?";
     const params: any[] = [startDate.toISOString(), endDate.toISOString()];
 
     if (repoIds && repoIds.length > 0) {
-      query += ` AND repo_id IN (${repoIds.map(() => '?').join(',')})`;
+      query += ` AND repo_id IN (${repoIds.map(() => "?").join(",")})`;
       params.push(...repoIds);
     }
 
-    query += ' ORDER BY date DESC';
+    if (author) {
+      query += " AND (author = ? OR email = ?)";
+      params.push(author, author);
+    }
+
+    query += " ORDER BY date DESC";
 
     const stmt = this.db.prepare(query);
     const rows = stmt.all(...params) as any[];
@@ -166,13 +187,15 @@ export class DatabaseManager {
   }
 
   getLatestCommitDate(repoId: number): Date | null {
-    const stmt = this.db.prepare('SELECT MAX(date) as latest_date FROM commits WHERE repo_id = ?');
+    const stmt = this.db.prepare(
+      "SELECT MAX(date) as latest_date FROM commits WHERE repo_id = ?"
+    );
     const result = stmt.get(repoId) as any;
     return result?.latest_date ? new Date(result.latest_date) : null;
   }
 
   // File change operations
-  addFileChange(fileChange: Omit<FileChange, 'id'>): number {
+  addFileChange(fileChange: Omit<FileChange, "id">): number {
     const stmt = this.db.prepare(`
       INSERT INTO file_changes (commit_id, file_path, change_type, insertions, deletions)
       VALUES (?, ?, ?, ?, ?)
@@ -188,32 +211,42 @@ export class DatabaseManager {
   }
 
   getFileChangesByCommit(commitId: number): FileChange[] {
-    const stmt = this.db.prepare('SELECT * FROM file_changes WHERE commit_id = ?');
+    const stmt = this.db.prepare(
+      "SELECT * FROM file_changes WHERE commit_id = ?"
+    );
     const rows = stmt.all(commitId) as any[];
     return rows.map(this.mapFileChange);
   }
 
   // Summary cache operations
-  getCachedSummary(periodType: string, startDate: Date, endDate: Date): CachedSummary | null {
+  getCachedSummary(
+    periodType: string,
+    startDate: Date,
+    endDate: Date
+  ): CachedSummary | null {
     const stmt = this.db.prepare(`
       SELECT * FROM cached_summaries 
       WHERE period_type = ? AND start_date = ? AND end_date = ?
       ORDER BY generated_at DESC
       LIMIT 1
     `);
-    const row = stmt.get(periodType, startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]) as any;
+    const row = stmt.get(
+      periodType,
+      startDate.toISOString().split("T")[0],
+      endDate.toISOString().split("T")[0]
+    ) as any;
     return row ? this.mapCachedSummary(row) : null;
   }
 
-  saveCachedSummary(summary: Omit<CachedSummary, 'id'>): number {
+  saveCachedSummary(summary: Omit<CachedSummary, "id">): number {
     const stmt = this.db.prepare(`
       INSERT INTO cached_summaries (period_type, start_date, end_date, content)
       VALUES (?, ?, ?, ?)
     `);
     const result = stmt.run(
       summary.periodType,
-      summary.startDate.toISOString().split('T')[0],
-      summary.endDate.toISOString().split('T')[0],
+      summary.startDate.toISOString().split("T")[0],
+      summary.endDate.toISOString().split("T")[0],
       summary.content
     );
     return result.lastInsertRowid as number;
@@ -227,7 +260,7 @@ export class DatabaseManager {
       path: row.path,
       remoteUrl: row.remote_url,
       lastSynced: row.last_synced ? new Date(row.last_synced) : undefined,
-      weight: row.weight
+      weight: row.weight,
     };
   }
 
@@ -243,7 +276,7 @@ export class DatabaseManager {
       filesChanged: row.files_changed,
       insertions: row.insertions,
       deletions: row.deletions,
-      branch: row.branch
+      branch: row.branch,
     };
   }
 
@@ -254,7 +287,7 @@ export class DatabaseManager {
       filePath: row.file_path,
       changeType: row.change_type,
       insertions: row.insertions,
-      deletions: row.deletions
+      deletions: row.deletions,
     };
   }
 
@@ -265,11 +298,11 @@ export class DatabaseManager {
       startDate: new Date(row.start_date),
       endDate: new Date(row.end_date),
       content: row.content,
-      generatedAt: new Date(row.generated_at)
+      generatedAt: new Date(row.generated_at),
     };
   }
 
   close(): void {
     this.db.close();
   }
-} 
+}

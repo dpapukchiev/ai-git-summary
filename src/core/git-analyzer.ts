@@ -78,27 +78,114 @@ export class GitAnalyzer {
     since?: Date
   ): Promise<LogResult["all"]> {
     try {
-      const options: any = {
-        maxCount: 1000, // Limit to prevent memory issues
-        format: {
-          hash: "%H",
-          date: "%ai",
-          message: "%s",
-          body: "%b",
-          author_name: "%an",
-          author_email: "%ae",
-        },
-      };
+      // Get all branches first
+      const branches = await git.branch(["--all"]);
 
-      if (since) {
-        options.from = since.toISOString();
+      // Define branches to check (prioritize common main branches)
+      const branchesToCheck = new Set<string>();
+
+      // Add current branch if it exists
+      if (branches.current) {
+        branchesToCheck.add(branches.current);
       }
 
-      const log = await git.log(options);
-      return log.all;
+      // Add common main branches
+      const commonBranches = ["main", "develop"];
+      for (const branch of commonBranches) {
+        if (branches.all.includes(branch)) {
+          branchesToCheck.add(branch);
+        }
+      }
+
+      // Add remote versions of common branches
+      for (const branch of commonBranches) {
+        const remoteBranch = `origin/${branch}`;
+        if (branches.all.includes(remoteBranch)) {
+          branchesToCheck.add(remoteBranch);
+        }
+      }
+
+      // If no specific branches found, fall back to current branch or all branches
+      if (branchesToCheck.size === 0) {
+        if (branches.current) {
+          branchesToCheck.add(branches.current);
+        } else {
+          // Add first few local branches as fallback
+          const localBranches = branches.all.filter(
+            (b) => !b.startsWith("remotes/")
+          );
+          localBranches.slice(0, 3).forEach((b) => branchesToCheck.add(b));
+        }
+      }
+
+      console.log(
+        `Fetching commits from branches: ${Array.from(branchesToCheck).join(", ")}`
+      );
+
+      const allCommits: any[] = [];
+      const seenHashes = new Set<string>();
+
+      for (const branch of branchesToCheck) {
+        try {
+          const options: any = {
+            maxCount: 1000, // Limit to prevent memory issues
+            from: branch,
+            format: {
+              hash: "%H",
+              date: "%ai",
+              message: "%s",
+              body: "%b",
+              author_name: "%an",
+              author_email: "%ae",
+            },
+          };
+
+          if (since) {
+            options.since = since.toISOString();
+          }
+
+          const log = await git.log(options);
+
+          // Deduplicate commits by hash and add to collection
+          for (const commit of log.all) {
+            if (!seenHashes.has(commit.hash)) {
+              seenHashes.add(commit.hash);
+              allCommits.push(commit);
+            }
+          }
+        } catch (error) {
+          console.warn(`Could not fetch commits from branch ${branch}:`, error);
+        }
+      }
+
+      return allCommits;
     } catch (error) {
       console.error("Error fetching commits:", error);
-      return [];
+
+      // Fallback to original behavior if branch detection fails
+      try {
+        const options: any = {
+          maxCount: 1000,
+          format: {
+            hash: "%H",
+            date: "%ai",
+            message: "%s",
+            body: "%b",
+            author_name: "%an",
+            author_email: "%ae",
+          },
+        };
+
+        if (since) {
+          options.from = since.toISOString();
+        }
+
+        const log = await git.log(options);
+        return log.all;
+      } catch (fallbackError) {
+        console.error("Fallback commit fetch also failed:", fallbackError);
+        return [];
+      }
     }
   }
 
