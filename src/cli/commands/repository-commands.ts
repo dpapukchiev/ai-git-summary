@@ -1,11 +1,13 @@
 import { Command } from "commander";
 import { DatabaseManager } from "../../storage/database";
 import { GitAnalyzer } from "../../core/git-analyzer";
-import { DateUtils } from "../../utils/date-utils";
-import { processInParallel } from "../../utils/parallel-processor";
-import { parseGitRemoteUrl } from "../../utils/git-utils";
-import * as fs from "fs";
-import * as path from "path";
+import {
+  AddRepoHandler,
+  DiscoverHandler,
+  SyncHandler,
+  ListHandler,
+  AddOrgHandler,
+} from "./handlers";
 
 /**
  * Add repository commands to the CLI program
@@ -15,6 +17,13 @@ export function addRepositoryCommands(
   db: DatabaseManager,
   gitAnalyzer: GitAnalyzer
 ) {
+  // Initialize handlers
+  const addRepoHandler = new AddRepoHandler(gitAnalyzer);
+  const discoverHandler = new DiscoverHandler(gitAnalyzer);
+  const syncHandler = new SyncHandler(db, gitAnalyzer);
+  const listHandler = new ListHandler(db);
+  const addOrgHandler = new AddOrgHandler(gitAnalyzer);
+
   // Add repository command
   program
     .command("add-repo")
@@ -23,16 +32,7 @@ export function addRepositoryCommands(
     .option("-n, --name <name>", "Custom name for the repository")
     .action(async (repoPath: string, options) => {
       try {
-        const absolutePath = path.resolve(repoPath);
-
-        if (!fs.existsSync(absolutePath)) {
-          console.error(`Repository path does not exist: ${absolutePath}`);
-          process.exit(1);
-        }
-
-        console.log(`Adding repository: ${absolutePath}`);
-        await gitAnalyzer.analyzeRepository(absolutePath, options.name);
-        console.log("✅ Repository added and analyzed successfully!");
+        await addRepoHandler.execute(repoPath, options);
       } catch (error) {
         console.error("❌ Error adding repository:", error);
         process.exit(1);
@@ -52,53 +52,7 @@ export function addRepositoryCommands(
     )
     .action(async (searchPaths: string[], options) => {
       try {
-        console.log("🔍 Discovering git repositories...");
-
-        const absolutePaths = searchPaths.map((p) => path.resolve(p));
-        const repositories =
-          await gitAnalyzer.discoverRepositories(absolutePaths);
-
-        if (repositories.length === 0) {
-          console.log("No git repositories found in the specified paths.");
-          return;
-        }
-
-        console.log(`\nFound ${repositories.length} repositories:`);
-        for (const repo of repositories) {
-          console.log(`  📁 ${repo.name} (${repo.path})`);
-        }
-
-        const concurrency = parseInt(options.concurrency, 10);
-        console.log(
-          `\nAnalyzing repositories with concurrency: ${concurrency}...`
-        );
-
-        const results = await processInParallel(
-          repositories,
-          async (repo) => {
-            try {
-              await gitAnalyzer.analyzeRepository(repo.path, repo.name);
-              return { success: true };
-            } catch (error) {
-              return { success: false, error };
-            }
-          },
-          concurrency,
-          (completed, total, repo, success) => {
-            const status = success ? "✅" : "❌";
-            console.log(`${status} [${completed}/${total}] ${repo.name}`);
-          }
-        );
-
-        console.log(`\n🎉 Discovery and analysis complete!`);
-        console.log(`✅ Successfully processed: ${results.completed}`);
-        if (results.failed > 0) {
-          console.log(`❌ Failed: ${results.failed}`);
-          console.log("\nFailed repositories:");
-          for (const { item, error } of results.errors) {
-            console.log(`  - ${item.name}: ${error}`);
-          }
-        }
+        await discoverHandler.execute(searchPaths, options);
       } catch (error) {
         console.error("❌ Error during discovery:", error);
         process.exit(1);
@@ -117,55 +71,7 @@ export function addRepositoryCommands(
     )
     .action(async (options) => {
       try {
-        console.log("🔄 Syncing repositories...");
-
-        const repositories = db.getAllRepositories();
-        let reposToSync = repositories;
-
-        if (options.repos && options.repos.length > 0) {
-          reposToSync = repositories.filter((repo) =>
-            options.repos.some(
-              (r: string) => repo.path.includes(r) || repo.name === r
-            )
-          );
-        }
-
-        if (reposToSync.length === 0) {
-          console.log("No repositories found to sync.");
-          return;
-        }
-
-        const concurrency = parseInt(options.concurrency, 10);
-        console.log(
-          `\nSyncing ${reposToSync.length} repositories with concurrency: ${concurrency}...`
-        );
-
-        const results = await processInParallel(
-          reposToSync,
-          async (repo) => {
-            try {
-              await gitAnalyzer.analyzeRepository(repo.path, repo.name);
-              return { success: true };
-            } catch (error) {
-              return { success: false, error };
-            }
-          },
-          concurrency,
-          (completed, total, repo, success) => {
-            const status = success ? "✅" : "❌";
-            console.log(`${status} [${completed}/${total}] ${repo.name}`);
-          }
-        );
-
-        console.log(`\n🎉 Sync complete!`);
-        console.log(`✅ Successfully synced: ${results.completed}`);
-        if (results.failed > 0) {
-          console.log(`❌ Failed: ${results.failed}`);
-          console.log("\nFailed repositories:");
-          for (const { item, error } of results.errors) {
-            console.log(`  - ${item.name}: ${error}`);
-          }
-        }
+        await syncHandler.execute(options);
       } catch (error) {
         console.error("❌ Error during sync:", error);
         process.exit(1);
@@ -178,29 +84,7 @@ export function addRepositoryCommands(
     .description("List all tracked repositories")
     .action(() => {
       try {
-        const repositories = db.getAllRepositories();
-
-        if (repositories.length === 0) {
-          console.log("No repositories are currently tracked.");
-          console.log('Use "git-summary add-repo <path>" to add repositories.');
-          return;
-        }
-
-        console.log(`\n📚 Tracked Repositories (${repositories.length}):\n`);
-
-        for (const repo of repositories) {
-          console.log(`📁 ${repo.name}`);
-          console.log(`   Path: ${repo.path}`);
-          if (repo.remoteUrl) {
-            console.log(`   Remote: ${repo.remoteUrl}`);
-          }
-          if (repo.lastSynced) {
-            console.log(
-              `   Last Synced: ${DateUtils.formatDateTime(repo.lastSynced)}`
-            );
-          }
-          console.log("");
-        }
+        listHandler.execute();
       } catch (error) {
         console.error("❌ Error listing repositories:", error);
         process.exit(1);
@@ -231,90 +115,7 @@ export function addRepositoryCommands(
     .action(
       async (organizationName: string, searchPaths: string[], options) => {
         try {
-          console.log(
-            `🔍 Discovering repositories from organization "${organizationName}"...`
-          );
-
-          const absolutePaths = searchPaths.map((p) => path.resolve(p));
-          const maxDepth = parseInt(options.maxDepth, 10);
-
-          // Validate search paths
-          for (const searchPath of absolutePaths) {
-            if (!fs.existsSync(searchPath)) {
-              console.error(`Search path does not exist: ${searchPath}`);
-              process.exit(1);
-            }
-          }
-
-          const repositories =
-            await gitAnalyzer.discoverRepositoriesByOrganization(
-              absolutePaths,
-              organizationName,
-              maxDepth
-            );
-
-          if (repositories.length === 0) {
-            console.log(
-              `No repositories found for organization "${organizationName}" in the specified paths.`
-            );
-            return;
-          }
-
-          console.log(
-            `\nFound ${repositories.length} repositories from "${organizationName}":`
-          );
-          for (const repo of repositories) {
-            const remoteInfo = repo.remoteUrl
-              ? parseGitRemoteUrl(repo.remoteUrl)
-              : null;
-            const provider = remoteInfo ? remoteInfo.provider : "unknown";
-            console.log(`  📁 ${repo.name} (${provider}) - ${repo.path}`);
-            if (repo.remoteUrl) {
-              console.log(`     Remote: ${repo.remoteUrl}`);
-            }
-          }
-
-          if (options.dryRun) {
-            console.log(
-              `\n🔍 Dry run completed. Would add ${repositories.length} repositories.`
-            );
-            console.log(
-              "Run without --dry-run to actually add these repositories."
-            );
-            return;
-          }
-
-          const concurrency = parseInt(options.concurrency, 10);
-          console.log(
-            `\nAdding and analyzing repositories with concurrency: ${concurrency}...`
-          );
-
-          const results = await processInParallel(
-            repositories,
-            async (repo) => {
-              try {
-                await gitAnalyzer.analyzeRepository(repo.path, repo.name);
-                return { success: true };
-              } catch (error) {
-                return { success: false, error };
-              }
-            },
-            concurrency,
-            (completed, total, repo, success) => {
-              const status = success ? "✅" : "❌";
-              console.log(`${status} [${completed}/${total}] ${repo.name}`);
-            }
-          );
-
-          console.log(`\n🎉 Organization repository discovery complete!`);
-          console.log(`✅ Successfully added: ${results.completed}`);
-          if (results.failed > 0) {
-            console.log(`❌ Failed: ${results.failed}`);
-            console.log("\nFailed repositories:");
-            for (const { item, error } of results.errors) {
-              console.log(`  - ${item.name}: ${error}`);
-            }
-          }
+          await addOrgHandler.execute(organizationName, searchPaths, options);
         } catch (error) {
           console.error(
             "❌ Error during organization repository discovery:",
