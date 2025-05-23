@@ -1,5 +1,6 @@
 import { GitAnalyzer } from "../../../core/git-analyzer";
 import { processInParallel } from "../../../utils/parallel-processor";
+import { log } from "../../../utils/logger";
 import * as path from "path";
 
 export interface DiscoverOptions {
@@ -14,24 +15,30 @@ export class DiscoverHandler {
     searchPaths: string[],
     options: DiscoverOptions
   ): Promise<void> {
-    console.log("🔍 Discovering git repositories...");
+    log.output("🔍 Discovering git repositories...", "discover");
 
     const absolutePaths = searchPaths.map((p) => path.resolve(p));
     const repositories =
       await this.gitAnalyzer.discoverRepositories(absolutePaths);
 
     if (repositories.length === 0) {
-      console.log("No git repositories found in the specified paths.");
+      log.output(
+        "No git repositories found in the specified paths.",
+        "discover"
+      );
       return;
     }
 
-    console.log(`\nFound ${repositories.length} repositories:`);
+    log.output(`\nFound ${repositories.length} repositories:`, "discover");
     for (const repo of repositories) {
-      console.log(`  📁 ${repo.name} (${repo.path})`);
+      log.output(`  📁 ${repo.name} (${repo.path})`, "discover");
     }
 
     const concurrency = parseInt(options.concurrency, 10);
-    console.log(`\nAnalyzing repositories with concurrency: ${concurrency}...`);
+    log.output(
+      `\nAnalyzing repositories with concurrency: ${concurrency}...`,
+      "discover"
+    );
 
     const results = await processInParallel(
       repositories,
@@ -46,17 +53,20 @@ export class DiscoverHandler {
       concurrency,
       (completed, total, repo, success) => {
         const status = success ? "✅" : "❌";
-        console.log(`${status} [${completed}/${total}] ${repo.name}`);
+        log.output(
+          `${status} [${completed}/${total}] ${repo.name}`,
+          "discover"
+        );
       }
     );
 
-    console.log(`\n🎉 Discovery and analysis complete!`);
-    console.log(`✅ Successfully processed: ${results.completed}`);
+    log.output(`\n🎉 Discovery and analysis complete!`, "discover");
+    log.output(`✅ Successfully processed: ${results.completed}`, "discover");
     if (results.failed > 0) {
-      console.log(`❌ Failed: ${results.failed}`);
-      console.log("\nFailed repositories:");
+      log.output(`❌ Failed: ${results.failed}`, "discover");
+      log.output("\nFailed repositories:", "discover");
       for (const { item, error } of results.errors) {
-        console.log(`  - ${item.name}: ${error}`);
+        log.output(`  - ${item.name}: ${error}`, "discover");
       }
     }
   }

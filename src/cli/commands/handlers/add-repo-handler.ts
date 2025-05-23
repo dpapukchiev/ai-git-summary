@@ -1,4 +1,5 @@
 import { GitAnalyzer } from "../../../core/git-analyzer";
+import { log } from "../../../utils/logger";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -16,8 +17,8 @@ export class AddRepoHandler {
       throw new Error(`Repository path does not exist: ${absolutePath}`);
     }
 
-    console.log(`Adding repository: ${absolutePath}`);
+    log.output(`Adding repository: ${absolutePath}`, "add-repo");
     await this.gitAnalyzer.analyzeRepository(absolutePath, options.name);
-    console.log("✅ Repository added and analyzed successfully!");
+    log.output("✅ Repository added and analyzed successfully!", "add-repo");
   }
 }

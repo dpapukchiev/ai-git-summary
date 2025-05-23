@@ -1,5 +1,6 @@
 import { printTextSummary } from "./text-formatter";
 import { printMarkdownSummary } from "./markdown-formatter";
+import { log } from "../utils/logger";
 
 export { printTextSummary, printMarkdownSummary };
 
@@ -15,7 +16,7 @@ export function formatSummary(
 ) {
   switch (format) {
     case "json":
-      console.log(JSON.stringify(summary, null, 2));
+      log.output(JSON.stringify(summary, null, 2), "formatter");
       break;
     case "markdown":
       printMarkdownSummary(summary);

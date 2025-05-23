@@ -1,6 +1,7 @@
 import { GitAnalyzer } from "../../../core/git-analyzer";
 import { processInParallel } from "../../../utils/parallel-processor";
 import { parseGitRemoteUrl } from "../../../utils/git-utils";
+import { log } from "../../../utils/logger";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -18,8 +19,9 @@ export class AddOrgHandler {
     searchPaths: string[],
     options: AddOrgOptions
   ): Promise<void> {
-    console.log(
-      `🔍 Discovering repositories from organization "${organizationName}"...`
+    log.output(
+      `🔍 Discovering repositories from organization "${organizationName}"...`,
+      "add-org"
     );
 
     const absolutePaths = searchPaths.map((p) => path.resolve(p));
@@ -40,37 +42,44 @@ export class AddOrgHandler {
       );
 
     if (repositories.length === 0) {
-      console.log(
-        `No repositories found for organization "${organizationName}" in the specified paths.`
+      log.output(
+        `No repositories found for organization "${organizationName}" in the specified paths.`,
+        "add-org"
       );
       return;
     }
 
-    console.log(
-      `\nFound ${repositories.length} repositories from "${organizationName}":`
+    log.output(
+      `\nFound ${repositories.length} repositories from "${organizationName}":`,
+      "add-org"
     );
     for (const repo of repositories) {
       const remoteInfo = repo.remoteUrl
         ? parseGitRemoteUrl(repo.remoteUrl)
         : null;
       const provider = remoteInfo ? remoteInfo.provider : "unknown";
-      console.log(`  📁 ${repo.name} (${provider}) - ${repo.path}`);
+      log.output(`  📁 ${repo.name} (${provider}) - ${repo.path}`, "add-org");
       if (repo.remoteUrl) {
-        console.log(`     Remote: ${repo.remoteUrl}`);
+        log.output(`     Remote: ${repo.remoteUrl}`, "add-org");
       }
     }
 
     if (options.dryRun) {
-      console.log(
-        `\n🔍 Dry run completed. Would add ${repositories.length} repositories.`
+      log.output(
+        `\n🔍 Dry run completed. Would add ${repositories.length} repositories.`,
+        "add-org"
       );
-      console.log("Run without --dry-run to actually add these repositories.");
+      log.output(
+        "Run without --dry-run to actually add these repositories.",
+        "add-org"
+      );
       return;
     }
 
     const concurrency = parseInt(options.concurrency, 10);
-    console.log(
-      `\nAdding and analyzing repositories with concurrency: ${concurrency}...`
+    log.output(
+      `\nAdding and analyzing repositories with concurrency: ${concurrency}...`,
+      "add-org"
     );
 
     const results = await processInParallel(
@@ -86,17 +95,17 @@ export class AddOrgHandler {
       concurrency,
       (completed, total, repo, success) => {
         const status = success ? "✅" : "❌";
-        console.log(`${status} [${completed}/${total}] ${repo.name}`);
+        log.output(`${status} [${completed}/${total}] ${repo.name}`, "add-org");
       }
     );
 
-    console.log(`\n🎉 Organization repository discovery complete!`);
-    console.log(`✅ Successfully added: ${results.completed}`);
+    log.output(`\n🎉 Organization repository discovery complete!`, "add-org");
+    log.output(`✅ Successfully added: ${results.completed}`, "add-org");
     if (results.failed > 0) {
-      console.log(`❌ Failed: ${results.failed}`);
-      console.log("\nFailed repositories:");
+      log.output(`❌ Failed: ${results.failed}`, "add-org");
+      log.output("\nFailed repositories:", "add-org");
       for (const { item, error } of results.errors) {
-        console.log(`  - ${item.name}: ${error}`);
+        log.output(`  - ${item.name}: ${error}`, "add-org");
       }
     }
   }

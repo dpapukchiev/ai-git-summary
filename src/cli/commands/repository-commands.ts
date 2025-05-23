@@ -8,6 +8,7 @@ import {
   ListHandler,
   AddOrgHandler,
 } from "./handlers";
+import { log } from "../../utils/logger";
 
 /**
  * Add repository commands to the CLI program
@@ -34,7 +35,7 @@ export function addRepositoryCommands(
       try {
         await addRepoHandler.execute(repoPath, options);
       } catch (error) {
-        console.error("❌ Error adding repository:", error);
+        log.error("Error adding repository", error as Error, "cli");
         process.exit(1);
       }
     });
@@ -54,7 +55,7 @@ export function addRepositoryCommands(
       try {
         await discoverHandler.execute(searchPaths, options);
       } catch (error) {
-        console.error("❌ Error during discovery:", error);
+        log.error("Error during discovery", error as Error, "cli");
         process.exit(1);
       }
     });
@@ -73,7 +74,7 @@ export function addRepositoryCommands(
       try {
         await syncHandler.execute(options);
       } catch (error) {
-        console.error("❌ Error during sync:", error);
+        log.error("Error during sync", error as Error, "cli");
         process.exit(1);
       }
     });
@@ -86,7 +87,7 @@ export function addRepositoryCommands(
       try {
         listHandler.execute();
       } catch (error) {
-        console.error("❌ Error listing repositories:", error);
+        log.error("Error listing repositories", error as Error, "cli");
         process.exit(1);
       }
     });
@@ -117,9 +118,10 @@ export function addRepositoryCommands(
         try {
           await addOrgHandler.execute(organizationName, searchPaths, options);
         } catch (error) {
-          console.error(
-            "❌ Error during organization repository discovery:",
-            error
+          log.error(
+            "Error during organization repository discovery",
+            error as Error,
+            "cli"
           );
           process.exit(1);
         }

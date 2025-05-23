@@ -1,5 +1,6 @@
 import { DatabaseManager } from "../../../storage/database";
 import { DateUtils } from "../../../utils/date-utils";
+import { log } from "../../../utils/logger";
 
 export class ListHandler {
   constructor(private db: DatabaseManager) {}
@@ -8,25 +9,29 @@ export class ListHandler {
     const repositories = this.db.getAllRepositories();
 
     if (repositories.length === 0) {
-      console.log("No repositories are currently tracked.");
-      console.log('Use "git-summary add-repo <path>" to add repositories.');
+      log.output("No repositories are currently tracked.", "list");
+      log.output(
+        'Use "git-summary add-repo <path>" to add repositories.',
+        "list"
+      );
       return;
     }
 
-    console.log(`\n📚 Tracked Repositories (${repositories.length}):\n`);
+    log.output(`\n📚 Tracked Repositories (${repositories.length}):\n`, "list");
 
     for (const repo of repositories) {
-      console.log(`📁 ${repo.name}`);
-      console.log(`   Path: ${repo.path}`);
+      log.output(`📁 ${repo.name}`, "list");
+      log.output(`   Path: ${repo.path}`, "list");
       if (repo.remoteUrl) {
-        console.log(`   Remote: ${repo.remoteUrl}`);
+        log.output(`   Remote: ${repo.remoteUrl}`, "list");
       }
       if (repo.lastSynced) {
-        console.log(
-          `   Last Synced: ${DateUtils.formatDateTime(repo.lastSynced)}`
+        log.output(
+          `   Last Synced: ${DateUtils.formatDateTime(repo.lastSynced)}`,
+          "list"
         );
       }
-      console.log("");
+      log.output("", "list");
     }
   }
 }

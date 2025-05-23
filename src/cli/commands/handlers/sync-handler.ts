@@ -1,6 +1,7 @@
 import { DatabaseManager } from "../../../storage/database";
 import { GitAnalyzer } from "../../../core/git-analyzer";
 import { processInParallel } from "../../../utils/parallel-processor";
+import { log } from "../../../utils/logger";
 
 export interface SyncOptions {
   repos?: string[];
@@ -14,7 +15,7 @@ export class SyncHandler {
   ) {}
 
   async execute(options: SyncOptions): Promise<void> {
-    console.log("🔄 Syncing repositories...");
+    log.output("🔄 Syncing repositories...", "sync");
 
     const repositories = this.db.getAllRepositories();
     let reposToSync = repositories;
@@ -28,13 +29,14 @@ export class SyncHandler {
     }
 
     if (reposToSync.length === 0) {
-      console.log("No repositories found to sync.");
+      log.output("No repositories found to sync.", "sync");
       return;
     }
 
     const concurrency = parseInt(options.concurrency, 10);
-    console.log(
-      `\nSyncing ${reposToSync.length} repositories with concurrency: ${concurrency}...`
+    log.output(
+      `\nSyncing ${reposToSync.length} repositories with concurrency: ${concurrency}...`,
+      "sync"
     );
 
     const results = await processInParallel(
@@ -50,17 +52,17 @@ export class SyncHandler {
       concurrency,
       (completed, total, repo, success) => {
         const status = success ? "✅" : "❌";
-        console.log(`${status} [${completed}/${total}] ${repo.name}`);
+        log.output(`${status} [${completed}/${total}] ${repo.name}`, "sync");
       }
     );
 
-    console.log(`\n🎉 Sync complete!`);
-    console.log(`✅ Successfully synced: ${results.completed}`);
+    log.output(`\n🎉 Sync complete!`, "sync");
+    log.output(`✅ Successfully synced: ${results.completed}`, "sync");
     if (results.failed > 0) {
-      console.log(`❌ Failed: ${results.failed}`);
-      console.log("\nFailed repositories:");
+      log.output(`❌ Failed: ${results.failed}`, "sync");
+      log.output("\nFailed repositories:", "sync");
       for (const { item, error } of results.errors) {
-        console.log(`  - ${item.name}: ${error}`);
+        log.output(`  - ${item.name}: ${error}`, "sync");
       }
     }
   }

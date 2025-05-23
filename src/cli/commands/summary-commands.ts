@@ -4,6 +4,7 @@ import { DateUtils } from "../../utils/date-utils";
 import { GitUtils } from "../../utils/git-utils";
 import { PeriodType } from "../../types";
 import { formatSummary, OutputFormat } from "../../formatters";
+import { log } from "../../utils/logger";
 
 /**
  * Add summary commands to the CLI program
@@ -38,7 +39,7 @@ export function addSummaryCommands(
       .action(async (options) => {
         try {
           if (options.verbose) {
-            console.log(`📊 Generating ${description.toLowerCase()}...`);
+            log.info(`📊 Generating ${description.toLowerCase()}...`, "cli");
           }
 
           // Handle author filtering
@@ -46,14 +47,19 @@ export function addSummaryCommands(
           if (options.me) {
             const currentUser = GitUtils.getCurrentUser();
             if (!currentUser) {
-              console.error(
-                "❌ Could not determine current git user. Please set git config user.name or user.email"
+              log.error(
+                "Could not determine current git user. Please set git config user.name or user.email",
+                undefined,
+                "cli"
               );
               process.exit(1);
             }
             author = currentUser;
             if (options.verbose) {
-              console.log(`🔍 Filtering commits by current user: ${author}`);
+              log.info(
+                `🔍 Filtering commits by current user: ${author}`,
+                "cli"
+              );
             }
           }
 
@@ -70,7 +76,7 @@ export function addSummaryCommands(
             options.verbose
           );
         } catch (error) {
-          console.error("❌ Error generating summary:", error);
+          log.error("Error generating summary", error as Error, "cli");
           process.exit(1);
         }
       });
@@ -97,18 +103,23 @@ export function addSummaryCommands(
         const endDate = new Date(options.to);
 
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-          console.error("❌ Invalid date format. Use YYYY-MM-DD format.");
+          log.error(
+            "Invalid date format. Use YYYY-MM-DD format.",
+            undefined,
+            "cli"
+          );
           process.exit(1);
         }
 
         if (startDate >= endDate) {
-          console.error("❌ Start date must be before end date.");
+          log.error("Start date must be before end date.", undefined, "cli");
           process.exit(1);
         }
 
         if (options.verbose) {
-          console.log(
-            `📊 Generating summary for ${options.from} to ${options.to}...`
+          log.info(
+            `📊 Generating summary for ${options.from} to ${options.to}...`,
+            "cli"
           );
         }
 
@@ -117,14 +128,16 @@ export function addSummaryCommands(
         if (options.me) {
           const currentUser = GitUtils.getCurrentUser();
           if (!currentUser) {
-            console.error(
-              "❌ Could not determine current git user. Please set git config user.name or user.email"
+            log.error(
+              "Could not determine current git user. Please set git config user.name or user.email",
+              undefined,
+              "cli"
             );
             process.exit(1);
           }
           author = currentUser;
           if (options.verbose) {
-            console.log(`🔍 Filtering commits by current user: ${author}`);
+            log.info(`🔍 Filtering commits by current user: ${author}`, "cli");
           }
         }
 
@@ -137,7 +150,7 @@ export function addSummaryCommands(
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);
       } catch (error) {
-        console.error("❌ Error generating summary:", error);
+        log.error("Error generating summary", error as Error, "cli");
         process.exit(1);
       }
     });

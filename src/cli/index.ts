@@ -5,6 +5,7 @@ import { DatabaseManager } from "../storage/database";
 import { GitAnalyzer } from "../core/git-analyzer";
 import { DataAggregator } from "../core/data-aggregator";
 import { addRepositoryCommands, addSummaryCommands } from "./commands";
+import { log } from "../utils/logger";
 
 const program = new Command();
 const db = new DatabaseManager();
@@ -22,12 +23,12 @@ addSummaryCommands(program, dataAggregator);
 
 // Global error handling
 process.on("unhandledRejection", (error) => {
-  console.error("❌ Unhandled error:", error);
+  log.error("Unhandled error", error as Error, "cli");
   process.exit(1);
 });
 
 process.on("SIGINT", () => {
-  console.log("\n👋 Goodbye!");
+  log.info("👋 Goodbye!", "cli");
   db.close();
   process.exit(0);
 });
