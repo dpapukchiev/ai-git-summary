@@ -142,22 +142,42 @@ class SummaryFormatter {
   static formatRepositoryBreakdown(summary: any, verbose: boolean): void {
     if (!verbose || summary.repositories.length <= 1) return;
 
-    log.output("📁 Repository Breakdown:", this.CONTEXT);
-    for (const repo of summary.repositories) {
-      const repoCommits =
-        summary.commits?.filter((c: any) => c.repoId === repo.id).length || 0;
-      const repoLines =
-        summary.commits
-          ?.filter((c: any) => c.repoId === repo.id)
-          .reduce(
-            (sum: number, c: any) => sum + c.insertions + c.deletions,
-            0
-          ) || 0;
+    // Calculate contributions for each repository and sort by most contributions
+    const reposWithContributions = summary.repositories
+      .map((repo: any) => {
+        const repoCommits =
+          summary.commits?.filter((c: any) => c.repoId === repo.id).length || 0;
+        const repoLines =
+          summary.commits
+            ?.filter((c: any) => c.repoId === repo.id)
+            .reduce(
+              (sum: number, c: any) => sum + c.insertions + c.deletions,
+              0
+            ) || 0;
 
+        return {
+          ...repo,
+          commits: repoCommits,
+          linesChanged: repoLines,
+        };
+      })
+      .sort((a: any, b: any) => {
+        // Sort by commits first (descending), then by lines changed (descending)
+        if (b.commits !== a.commits) {
+          return b.commits - a.commits;
+        }
+        return b.linesChanged - a.linesChanged;
+      });
+
+    log.output(
+      "📁 Repository Breakdown (sorted by contributions):",
+      this.CONTEXT
+    );
+    for (const repo of reposWithContributions) {
       log.output(`  📂 ${repo.name}`, this.CONTEXT);
       log.output(`     ${repo.path}`, this.CONTEXT);
       log.output(
-        `     ${repoCommits} commits, ${repoLines.toLocaleString()} lines changed`,
+        `     ${repo.commits} commits, ${repo.linesChanged.toLocaleString()} lines changed`,
         this.CONTEXT
       );
       if (repo.remoteUrl) {
