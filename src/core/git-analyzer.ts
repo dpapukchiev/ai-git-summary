@@ -1,6 +1,7 @@
 import { simpleGit, SimpleGit, LogResult, DiffResult } from "simple-git";
 import fs from "fs";
 import path from "path";
+import PQueue from "p-queue";
 import { Repository, Commit, FileChange } from "../types";
 import { DatabaseManager } from "../storage/database";
 import {
@@ -11,9 +12,17 @@ import {
 
 export class GitAnalyzer {
   private db: DatabaseManager;
+  private queue: PQueue;
+  private concurrency: number;
 
-  constructor(db: DatabaseManager) {
+  constructor(db: DatabaseManager, options?: { concurrency?: number }) {
     this.db = db;
+    this.concurrency = options?.concurrency || 5;
+    this.queue = new PQueue({
+      concurrency: this.concurrency,
+      timeout: 60000, // 60 second timeout per operation
+      throwOnTimeout: true,
+    });
   }
 
   async analyzeRepository(repoPath: string, repoName?: string): Promise<void> {
@@ -59,16 +68,65 @@ export class GitAnalyzer {
 
     console.log(`Found ${commits.length} new commits`);
 
-    for (let i = 0; i < commits.length; i++) {
-      const commit = commits[i];
-      console.log(
-        `Processing commit: ${commit?.hash} (${i + 1} out of ${commits.length})`
-      );
-      await this.processCommit(git, repo.id, commit);
+    if (commits.length > 0) {
+      await this.processCommitsInParallel(git, repo.id!, commits);
     }
 
     // Update last synced timestamp
     this.db.updateRepositoryLastSynced(repo.id, new Date());
+  }
+
+  private async processCommitsInParallel(
+    git: SimpleGit,
+    repoId: number,
+    commits: readonly any[]
+  ): Promise<void> {
+    console.log(`Processing commits with concurrency: ${this.concurrency}`);
+
+    let processed = 0;
+    const startTime = Date.now();
+
+    const commitTasks = commits.map((commit, index) =>
+      this.queue.add(async () => {
+        console.log(
+          `Processing commit: ${commit?.hash} (${index + 1}/${commits.length})`
+        );
+
+        try {
+          await this.processCommit(git, repoId, commit);
+          processed++;
+
+          // Progress logging every 10 commits or on completion
+          if (processed % 10 === 0 || processed === commits.length) {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const rate = processed / elapsed;
+            console.log(
+              `✓ Processed ${processed}/${commits.length} commits (${rate.toFixed(1)} commits/sec)`
+            );
+          }
+        } catch (error) {
+          console.error(`Failed to process commit ${commit?.hash}:`, error);
+          throw error; // Re-throw for Promise.allSettled to catch
+        }
+      })
+    );
+
+    const results = await Promise.allSettled(commitTasks);
+    const elapsed = (Date.now() - startTime) / 1000;
+
+    const successful = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    console.log(
+      `🎉 Completed processing ${commits.length} commits in ${elapsed.toFixed(1)}s`
+    );
+    console.log(`✅ Successful: ${successful}, ❌ Failed: ${failed}`);
+
+    if (failed > 0) {
+      console.warn(
+        `⚠️  ${failed} commits failed to process. Check logs above for details.`
+      );
+    }
   }
 
   private async getRemoteUrl(git: SimpleGit): Promise<string | undefined> {
@@ -353,6 +411,21 @@ export class GitAnalyzer {
     }
 
     return fileChanges;
+  }
+
+  async cleanup(): Promise<void> {
+    console.log("🧹 Cleaning up queue...");
+    this.queue.clear();
+    await this.queue.onIdle();
+    console.log("✅ Queue cleanup completed");
+  }
+
+  getQueueStatus(): { size: number; pending: number; isPaused: boolean } {
+    return {
+      size: this.queue.size,
+      pending: this.queue.pending,
+      isPaused: this.queue.isPaused,
+    };
   }
 
   async discoverRepositories(searchPaths: string[]): Promise<Repository[]> {
