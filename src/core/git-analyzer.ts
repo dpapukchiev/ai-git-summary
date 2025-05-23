@@ -3,6 +3,11 @@ import fs from "fs";
 import path from "path";
 import { Repository, Commit, FileChange } from "../types";
 import { DatabaseManager } from "../storage/database";
+import {
+  parseGitRemoteUrl,
+  organizationMatches,
+  GitRemoteInfo,
+} from "../utils/git-utils";
 
 export class GitAnalyzer {
   private db: DatabaseManager;
@@ -404,5 +409,42 @@ export class GitAnalyzer {
 
     await searchDirectory(basePath, 0);
     return repositories;
+  }
+
+  async discoverRepositoriesByOrganization(
+    searchPaths: string[],
+    organizationName: string,
+    maxDepth: number = 3
+  ): Promise<Repository[]> {
+    const allRepositories = await this.discoverRepositories(searchPaths);
+    const filteredRepositories: Repository[] = [];
+
+    for (const repo of allRepositories) {
+      try {
+        // Get remote URL for this repository
+        const git = simpleGit(repo.path);
+        const remoteUrl = await this.getRemoteUrl(git);
+
+        if (remoteUrl) {
+          const remoteInfo = parseGitRemoteUrl(remoteUrl);
+          if (
+            remoteInfo &&
+            organizationMatches(remoteInfo.organization, organizationName)
+          ) {
+            filteredRepositories.push({
+              ...repo,
+              remoteUrl,
+            });
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `Could not check remote for repository ${repo.path}:`,
+          error
+        );
+      }
+    }
+
+    return filteredRepositories;
   }
 }
