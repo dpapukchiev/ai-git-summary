@@ -59,7 +59,11 @@ export class GitAnalyzer {
 
     console.log(`Found ${commits.length} new commits`);
 
-    for (const commit of commits) {
+    for (let i = 0; i < commits.length; i++) {
+      const commit = commits[i];
+      console.log(
+        `Processing commit: ${commit?.hash} (${i + 1} out of ${commits.length})`
+      );
       await this.processCommit(git, repo.id, commit);
     }
 
@@ -354,16 +358,24 @@ export class GitAnalyzer {
   async discoverRepositories(searchPaths: string[]): Promise<Repository[]> {
     const repositories: Repository[] = [];
 
+    console.log(
+      `🔍 Discovering repositories in ${searchPaths.length} search paths...`
+    );
+
     for (const searchPath of searchPaths) {
+      console.log(`📂 Scanning: ${searchPath}`);
+
       if (!fs.existsSync(searchPath)) {
-        console.warn(`Search path does not exist: ${searchPath}`);
+        console.warn(`⚠️  Search path does not exist: ${searchPath}`);
         continue;
       }
 
       const repos = await this.findGitRepositories(searchPath);
+      console.log(`   Found ${repos.length} repositories in this path`);
       repositories.push(...repos);
     }
 
+    console.log(`📊 Total repositories discovered: ${repositories.length}`);
     return repositories;
   }
 
@@ -416,33 +428,92 @@ export class GitAnalyzer {
     organizationName: string,
     maxDepth: number = 3
   ): Promise<Repository[]> {
+    console.log(
+      `\n🔍 Starting organization discovery for: ${organizationName}`
+    );
+    console.log(`📂 Searching in paths: ${searchPaths.join(", ")}`);
+    console.log(`📏 Max depth: ${maxDepth}`);
+
     const allRepositories = await this.discoverRepositories(searchPaths);
+    console.log(`📦 Found ${allRepositories.length} total repositories`);
+
+    if (allRepositories.length === 0) {
+      console.log(`⚠️  No repositories found in search paths`);
+      return [];
+    }
+
     const filteredRepositories: Repository[] = [];
 
-    for (const repo of allRepositories) {
+    console.log(`\n🔎 Checking each repository for organization match...`);
+
+    for (let i = 0; i < allRepositories.length; i++) {
+      const repo = allRepositories[i];
+      if (!repo) {
+        console.warn(`   ⚠️  Skipping undefined repository at index ${i}`);
+        continue;
+      }
+
+      console.log(
+        `\n[${i + 1}/${allRepositories.length}] Checking: ${repo.name}`
+      );
+      console.log(`   📍 Path: ${repo.path}`);
+
       try {
         // Get remote URL for this repository
         const git = simpleGit(repo.path);
         const remoteUrl = await this.getRemoteUrl(git);
 
         if (remoteUrl) {
+          console.log(`   🌐 Remote URL: ${remoteUrl}`);
           const remoteInfo = parseGitRemoteUrl(remoteUrl);
-          if (
-            remoteInfo &&
-            organizationMatches(remoteInfo.organization, organizationName)
-          ) {
-            filteredRepositories.push({
-              ...repo,
-              remoteUrl,
-            });
+
+          if (remoteInfo) {
+            console.log(
+              `   🏢 Parsed organization: ${remoteInfo.organization}`
+            );
+            console.log(`   📊 Repository name: ${remoteInfo.repository}`);
+
+            if (
+              organizationMatches(remoteInfo.organization, organizationName)
+            ) {
+              console.log(`   ✅ MATCH! Adding to filtered results`);
+              filteredRepositories.push({
+                id: repo.id,
+                name: repo.name,
+                path: repo.path,
+                lastSynced: repo.lastSynced,
+                weight: repo.weight,
+                remoteUrl,
+              });
+            } else {
+              console.log(`   ❌ No match (expected: ${organizationName})`);
+            }
+          } else {
+            console.log(`   ⚠️  Could not parse remote URL`);
           }
+        } else {
+          console.log(`   ⚠️  No remote URL found`);
         }
       } catch (error) {
         console.warn(
-          `Could not check remote for repository ${repo.path}:`,
+          `   ❌ Error checking remote for repository ${repo.path}:`,
           error
         );
       }
+    }
+
+    console.log(`\n🎯 Organization discovery complete!`);
+    console.log(
+      `📊 Found ${filteredRepositories.length} repositories matching organization: ${organizationName}`
+    );
+
+    if (filteredRepositories.length > 0) {
+      console.log(`📋 Matching repositories:`);
+      filteredRepositories.forEach((repo, index) => {
+        if (repo) {
+          console.log(`   ${index + 1}. ${repo.name} (${repo.path})`);
+        }
+      });
     }
 
     return filteredRepositories;
