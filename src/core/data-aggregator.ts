@@ -2,11 +2,239 @@ import { DatabaseManager } from "../storage/database";
 import { Commit, WorkSummary, TimePeriod } from "../types";
 import { DateUtils } from "../utils/date-utils";
 
-export class DataAggregator {
-  private db: DatabaseManager;
+// Constants for better maintainability
+const FILE_EXTENSION_PATTERNS = {
+  TypeScript: /\.ts|typescript/gi,
+  JavaScript: /\.js|javascript/gi,
+  Python: /\.py|python/gi,
+  "Java/Kotlin": /\.java|\.kt|kotlin/gi,
+  Go: /\.go|golang/gi,
+  Rust: /\.rs|rust/gi,
+  "C++": /\.cpp|\.c\+\+|\.cc|\.cxx/gi,
+  C: /\.c(?!\+)|\.h(?!pp)/gi,
+  "C#": /\.cs|c#/gi,
+  Ruby: /\.rb|ruby/gi,
+  PHP: /\.php/gi,
+  Swift: /\.swift/gi,
+  HTML: /\.html|\.htm/gi,
+  CSS: /\.css|\.scss|\.sass/gi,
+  JSON: /\.json/gi,
+  XML: /\.xml/gi,
+  Markdown: /\.md|markdown/gi,
+  SQL: /\.sql/gi,
+  Shell: /\.sh|bash|shell/gi,
+  YAML: /\.yml|\.yaml/gi,
+  Docker: /dockerfile/gi,
+} as const;
 
-  constructor(db: DatabaseManager) {
-    this.db = db;
+const FILE_FILTERING_RULES = {
+  MIN_LENGTH: 3,
+  MAX_LENGTH: 100,
+  EXCLUDED_PREFIXES: ["http"],
+  EXCLUDED_CHARACTERS: ["@"],
+} as const;
+
+// Single Responsibility: Language detection and statistics
+class LanguageStatsCalculator {
+  private languageStats = new Map<string, number>();
+
+  calculateFromCommits(commits: Commit[]): Map<string, number> {
+    this.languageStats.clear();
+
+    for (const commit of commits) {
+      this.processCommitForLanguages(commit);
+    }
+
+    return new Map(this.languageStats);
+  }
+
+  private processCommitForLanguages(commit: Commit): void {
+    const message = commit.message.toLowerCase();
+    const language = this.detectLanguageFromMessage(message);
+    const changeCount = commit.insertions + commit.deletions;
+
+    this.incrementLanguageStats(language, changeCount);
+  }
+
+  private detectLanguageFromMessage(message: string): string {
+    for (const [language, pattern] of Object.entries(FILE_EXTENSION_PATTERNS)) {
+      if (pattern.test(message)) {
+        return language;
+      }
+    }
+    return "Other";
+  }
+
+  private incrementLanguageStats(language: string, changeCount: number): void {
+    const currentCount = this.languageStats.get(language) || 0;
+    this.languageStats.set(language, currentCount + changeCount);
+  }
+}
+
+// Single Responsibility: File statistics calculation
+class FileStatsCalculator {
+  private fileStats = new Map<string, number>();
+
+  calculateFromCommits(commits: Commit[]): Map<string, number> {
+    this.fileStats.clear();
+
+    for (const commit of commits) {
+      this.extractFilesFromCommitMessage(commit.message);
+    }
+
+    return new Map(this.fileStats);
+  }
+
+  private extractFilesFromCommitMessage(message: string): void {
+    const fileMatches = this.findFilePatterns(message);
+
+    for (const match of fileMatches) {
+      if (this.isValidFilePath(match)) {
+        this.incrementFileStats(match.toLowerCase());
+      }
+    }
+  }
+
+  private findFilePatterns(message: string): string[] {
+    const patterns = [
+      /([a-zA-Z0-9_\-/]+\.[a-zA-Z0-9]+)/g,
+      /([a-zA-Z0-9_\-]+\/[a-zA-Z0-9_\-/.]+)/g,
+    ];
+
+    const allMatches: string[] = [];
+    for (const pattern of patterns) {
+      const matches = message.match(pattern);
+      if (matches) {
+        allMatches.push(...matches);
+      }
+    }
+
+    return allMatches;
+  }
+
+  private isValidFilePath(filePath: string): boolean {
+    return (
+      filePath.includes(".") &&
+      filePath.length >= FILE_FILTERING_RULES.MIN_LENGTH &&
+      filePath.length <= FILE_FILTERING_RULES.MAX_LENGTH &&
+      !this.hasExcludedPrefixes(filePath) &&
+      !this.hasExcludedCharacters(filePath)
+    );
+  }
+
+  private hasExcludedPrefixes(filePath: string): boolean {
+    return FILE_FILTERING_RULES.EXCLUDED_PREFIXES.some((prefix) =>
+      filePath.startsWith(prefix)
+    );
+  }
+
+  private hasExcludedCharacters(filePath: string): boolean {
+    return FILE_FILTERING_RULES.EXCLUDED_CHARACTERS.some((char) =>
+      filePath.includes(char)
+    );
+  }
+
+  private incrementFileStats(normalizedPath: string): void {
+    const currentCount = this.fileStats.get(normalizedPath) || 0;
+    this.fileStats.set(normalizedPath, currentCount + 1);
+  }
+}
+
+// Single Responsibility: Repository filtering logic
+class RepositoryFilter {
+  constructor(private db: DatabaseManager) {}
+
+  getFilteredRepositories(repositoryPaths?: string[]) {
+    const allRepositories = this.db.getAllRepositories();
+
+    if (!repositoryPaths || repositoryPaths.length === 0) {
+      return allRepositories;
+    }
+
+    return allRepositories.filter((repo) =>
+      this.matchesAnyPath(repo, repositoryPaths)
+    );
+  }
+
+  private matchesAnyPath(repo: any, paths: string[]): boolean {
+    return paths.some((path) => repo.path.includes(path) || repo.name === path);
+  }
+
+  extractRepositoryIds(repositories: any[]): number[] {
+    return repositories
+      .map((repo) => repo.id!)
+      .filter((id) => id !== undefined);
+  }
+}
+
+// Single Responsibility: Statistics calculation
+class CommitStatsCalculator {
+  calculateStats(commits: Commit[], period: TimePeriod) {
+    const basicStats = this.calculateBasicStats(commits);
+    const timeStats = this.calculateTimeStats(commits, period);
+    const languageStats = new LanguageStatsCalculator().calculateFromCommits(
+      commits
+    );
+    const fileStats = new FileStatsCalculator().calculateFromCommits(commits);
+
+    return {
+      ...basicStats,
+      ...timeStats,
+      topLanguages: this.formatTopLanguages(languageStats, 10),
+      topFiles: this.formatTopFiles(fileStats, 20),
+    };
+  }
+
+  private calculateBasicStats(commits: Commit[]) {
+    return {
+      totalCommits: commits.length,
+      totalFilesChanged: commits.reduce((sum, c) => sum + c.filesChanged, 0),
+      totalInsertions: commits.reduce((sum, c) => sum + c.insertions, 0),
+      totalDeletions: commits.reduce((sum, c) => sum + c.deletions, 0),
+    };
+  }
+
+  private calculateTimeStats(commits: Commit[], period: TimePeriod) {
+    const activeDays = DateUtils.getActiveDays(commits);
+    const periodDays = DateUtils.getDaysInPeriod(
+      period.startDate,
+      period.endDate
+    );
+    const averageCommitsPerDay =
+      periodDays > 0 ? commits.length / periodDays : 0;
+
+    return {
+      activeDays,
+      averageCommitsPerDay: Math.round(averageCommitsPerDay * 100) / 100,
+    };
+  }
+
+  private formatTopLanguages(
+    languageStats: Map<string, number>,
+    limit: number
+  ) {
+    return Array.from(languageStats.entries())
+      .map(([language, changes]) => ({ language, changes }))
+      .sort((a, b) => b.changes - a.changes)
+      .slice(0, limit);
+  }
+
+  private formatTopFiles(fileStats: Map<string, number>, limit: number) {
+    return Array.from(fileStats.entries())
+      .map(([file, changes]) => ({ file, changes }))
+      .sort((a, b) => b.changes - a.changes)
+      .slice(0, limit);
+  }
+}
+
+// Main class with focused responsibility: Data aggregation orchestration
+export class DataAggregator {
+  private repositoryFilter: RepositoryFilter;
+  private statsCalculator: CommitStatsCalculator;
+
+  constructor(private db: DatabaseManager) {
+    this.repositoryFilter = new RepositoryFilter(db);
+    this.statsCalculator = new CommitStatsCalculator();
   }
 
   async generateWorkSummary(
@@ -14,32 +242,9 @@ export class DataAggregator {
     repositoryPaths?: string[],
     author?: string
   ): Promise<WorkSummary> {
-    // Get repositories to analyze
-    let repositories = this.db.getAllRepositories();
-
-    if (repositoryPaths && repositoryPaths.length > 0) {
-      repositories = repositories.filter((repo) =>
-        repositoryPaths.some((p) => repo.path.includes(p) || repo.name === p)
-      );
-    }
-
-    if (repositories.length === 0) {
-      throw new Error("No repositories found for analysis");
-    }
-
-    // Get commits for the period
-    const repoIds = repositories
-      .map((r) => r.id!)
-      .filter((id) => id !== undefined);
-    const commits = this.db.getCommitsByDateRange(
-      period.startDate,
-      period.endDate,
-      repoIds,
-      author
-    );
-
-    // Generate statistics
-    const stats = this.calculateStats(commits, period);
+    const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
+    const commits = this.getCommitsForPeriod(period, repositories, author);
+    const stats = this.statsCalculator.calculateStats(commits, period);
 
     return {
       period,
@@ -49,167 +254,13 @@ export class DataAggregator {
     };
   }
 
-  private calculateStats(commits: Commit[], period: TimePeriod) {
-    const totalCommits = commits.length;
-    const totalFilesChanged = commits.reduce(
-      (sum, c) => sum + c.filesChanged,
-      0
-    );
-    const totalInsertions = commits.reduce((sum, c) => sum + c.insertions, 0);
-    const totalDeletions = commits.reduce((sum, c) => sum + c.deletions, 0);
-
-    const activeDays = DateUtils.getActiveDays(commits);
-    const periodDays = DateUtils.getDaysInPeriod(
-      period.startDate,
-      period.endDate
-    );
-    const averageCommitsPerDay = periodDays > 0 ? totalCommits / periodDays : 0;
-
-    // Calculate top languages (based on file extensions)
-    const languageStats = this.calculateLanguageStats(commits);
-    const topLanguages = Array.from(languageStats.entries())
-      .map(([language, changes]) => ({ language, changes }))
-      .sort((a, b) => b.changes - a.changes)
-      .slice(0, 10);
-
-    // Calculate top files
-    const fileStats = this.calculateFileStats(commits);
-    const topFiles = Array.from(fileStats.entries())
-      .map(([file, changes]) => ({ file, changes }))
-      .sort((a, b) => b.changes - a.changes)
-      .slice(0, 20);
-
-    return {
-      totalCommits,
-      totalFilesChanged,
-      totalInsertions,
-      totalDeletions,
-      activeDays,
-      averageCommitsPerDay: Math.round(averageCommitsPerDay * 100) / 100,
-      topLanguages,
-      topFiles,
-    };
-  }
-
-  private calculateLanguageStats(commits: Commit[]): Map<string, number> {
-    const languageStats = new Map<string, number>();
-
-    // For now, we'll infer languages from commit messages and file paths
-    // This is a simplified approach - in a full implementation, we'd analyze file changes
-    for (const commit of commits) {
-      // Extract potential file extensions from commit messages
-      const message = commit.message.toLowerCase();
-
-      // Simple pattern matching for common file types
-      const patterns = [
-        { pattern: /\.ts|typescript/gi, language: "TypeScript" },
-        { pattern: /\.js|javascript/gi, language: "JavaScript" },
-        { pattern: /\.py|python/gi, language: "Python" },
-        { pattern: /\.java|\.kt|kotlin/gi, language: "Java/Kotlin" },
-        { pattern: /\.go|golang/gi, language: "Go" },
-        { pattern: /\.rs|rust/gi, language: "Rust" },
-        { pattern: /\.cpp|\.c\+\+|\.cc|\.cxx/gi, language: "C++" },
-        { pattern: /\.c(?!\+)|\.h(?!pp)/gi, language: "C" },
-        { pattern: /\.cs|c#/gi, language: "C#" },
-        { pattern: /\.rb|ruby/gi, language: "Ruby" },
-        { pattern: /\.php/gi, language: "PHP" },
-        { pattern: /\.swift/gi, language: "Swift" },
-        { pattern: /\.html|\.htm/gi, language: "HTML" },
-        { pattern: /\.css|\.scss|\.sass/gi, language: "CSS" },
-        { pattern: /\.json/gi, language: "JSON" },
-        { pattern: /\.xml/gi, language: "XML" },
-        { pattern: /\.md|markdown/gi, language: "Markdown" },
-        { pattern: /\.sql/gi, language: "SQL" },
-        { pattern: /\.sh|bash|shell/gi, language: "Shell" },
-        { pattern: /\.yml|\.yaml/gi, language: "YAML" },
-        { pattern: /dockerfile/gi, language: "Docker" },
-      ];
-
-      let matched = false;
-      for (const { pattern, language } of patterns) {
-        if (pattern.test(message)) {
-          const current = languageStats.get(language) || 0;
-          languageStats.set(
-            language,
-            current + commit.insertions + commit.deletions
-          );
-          matched = true;
-          break;
-        }
-      }
-
-      if (!matched) {
-        // Generic code change
-        const current = languageStats.get("Other") || 0;
-        languageStats.set(
-          "Other",
-          current + commit.insertions + commit.deletions
-        );
-      }
-    }
-
-    return languageStats;
-  }
-
-  private calculateFileStats(commits: Commit[]): Map<string, number> {
-    const fileStats = new Map<string, number>();
-
-    // Extract file paths from commit messages (simplified approach)
-    for (const commit of commits) {
-      const message = commit.message;
-
-      // Look for common file path patterns in commit messages
-      const filePatterns = [
-        /([a-zA-Z0-9_\-/]+\.[a-zA-Z0-9]+)/g, // Basic file.ext pattern
-        /([a-zA-Z0-9_\-]+\/[a-zA-Z0-9_\-/.]+)/g, // Path-like patterns
-      ];
-
-      for (const pattern of filePatterns) {
-        const matches = message.match(pattern);
-        if (matches) {
-          for (const match of matches) {
-            // Filter out common non-file patterns
-            if (
-              match.includes(".") &&
-              !match.startsWith("http") &&
-              !match.includes("@") &&
-              match.length > 3 &&
-              match.length < 100
-            ) {
-              const normalized = match.toLowerCase();
-              const current = fileStats.get(normalized) || 0;
-              fileStats.set(normalized, current + 1);
-            }
-          }
-        }
-      }
-    }
-
-    return fileStats;
-  }
-
   async getCommitTrends(
     period: TimePeriod,
     repositoryPaths?: string[],
     author?: string
   ): Promise<Map<string, number>> {
-    let repositories = this.db.getAllRepositories();
-
-    if (repositoryPaths && repositoryPaths.length > 0) {
-      repositories = repositories.filter((repo) =>
-        repositoryPaths.some((p) => repo.path.includes(p) || repo.name === p)
-      );
-    }
-
-    const repoIds = repositories
-      .map((r) => r.id!)
-      .filter((id) => id !== undefined);
-    const commits = this.db.getCommitsByDateRange(
-      period.startDate,
-      period.endDate,
-      repoIds,
-      author
-    );
+    const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
+    const commits = this.getCommitsForPeriod(period, repositories, author);
 
     return DateUtils.getCommitsByDay(commits);
   }
@@ -226,41 +277,58 @@ export class DataAggregator {
       deletions: number;
     }>
   > {
-    let repositories = this.db.getAllRepositories();
+    const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
+    const commits = this.getCommitsForPeriod(period, repositories, author);
 
-    if (repositoryPaths && repositoryPaths.length > 0) {
-      repositories = repositories.filter((repo) =>
-        repositoryPaths.some((p) => repo.path.includes(p) || repo.name === p)
-      );
+    return this.calculateAuthorStatistics(commits);
+  }
+
+  private getRepositoriesForAnalysis(repositoryPaths?: string[]) {
+    const repositories =
+      this.repositoryFilter.getFilteredRepositories(repositoryPaths);
+
+    if (repositories.length === 0) {
+      throw new Error("No repositories found for analysis");
     }
 
-    const repoIds = repositories
-      .map((r) => r.id!)
-      .filter((id) => id !== undefined);
-    const commits = this.db.getCommitsByDateRange(
+    return repositories;
+  }
+
+  private getCommitsForPeriod(
+    period: TimePeriod,
+    repositories: any[],
+    author?: string
+  ): Commit[] {
+    const repoIds = this.repositoryFilter.extractRepositoryIds(repositories);
+    return this.db.getCommitsByDateRange(
       period.startDate,
       period.endDate,
       repoIds,
       author
     );
+  }
 
+  private calculateAuthorStatistics(commits: Commit[]) {
     const authorStats = new Map<
       string,
-      { commits: number; insertions: number; deletions: number }
+      {
+        commits: number;
+        insertions: number;
+        deletions: number;
+      }
     >();
 
     for (const commit of commits) {
-      const author = commit.author;
-      const current = authorStats.get(author) || {
+      const currentStats = authorStats.get(commit.author) || {
         commits: 0,
         insertions: 0,
         deletions: 0,
       };
 
-      authorStats.set(author, {
-        commits: current.commits + 1,
-        insertions: current.insertions + commit.insertions,
-        deletions: current.deletions + commit.deletions,
+      authorStats.set(commit.author, {
+        commits: currentStats.commits + 1,
+        insertions: currentStats.insertions + commit.insertions,
+        deletions: currentStats.deletions + commit.deletions,
       });
     }
 
