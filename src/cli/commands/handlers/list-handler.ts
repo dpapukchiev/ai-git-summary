@@ -21,9 +21,9 @@ export class ListHandler {
 
     for (const repo of repositories) {
       log.output(`📁 ${repo.name}`, "list");
-      log.output(`   Path: ${repo.path}`, "list");
+      log.output(`Path: ${repo.path}`, "list");
       if (repo.remoteUrl) {
-        log.output(`   Remote: ${repo.remoteUrl}`, "list");
+        log.output(`Remote: ${repo.remoteUrl}`, "list");
       }
       if (repo.lastSynced) {
         log.output(

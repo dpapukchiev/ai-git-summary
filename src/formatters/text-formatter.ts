@@ -1,4 +1,5 @@
 import { DateUtils } from "../utils/date-utils";
+import { log } from "../utils/logger";
 
 /**
  * Helper function to find most productive day
@@ -28,31 +29,45 @@ function getMostProductiveDay(commits: any[]): string {
  * Print detailed text summary to console
  */
 export function printTextSummary(summary: any, verbose = false) {
-  console.log(`\n📊 Work Summary: ${summary.period.label}\n`);
-  console.log(
-    `Period: ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}`
+  log.output(`\n📊 Work Summary: ${summary.period.label}\n`, "text-formatter");
+  log.output(
+    `Period: ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}`,
+    "text-formatter"
   );
-  console.log(`Repositories: ${summary.repositories.length}\n`);
+  log.output(
+    `Repositories: ${summary.repositories.length}\n`,
+    "text-formatter"
+  );
 
   // Overall stats with more context
-  console.log("📈 Overall Statistics:");
-  console.log(`  Commits: ${summary.stats.totalCommits.toLocaleString()}`);
-  console.log(
-    `  Files Changed: ${summary.stats.totalFilesChanged.toLocaleString()}`
+  log.output("📈 Overall Statistics:", "text-formatter");
+  log.output(
+    `  Commits: ${summary.stats.totalCommits.toLocaleString()}`,
+    "text-formatter"
   );
-  console.log(
-    `  Lines Added: +${summary.stats.totalInsertions.toLocaleString()}`
+  log.output(
+    `  Files Changed: ${summary.stats.totalFilesChanged.toLocaleString()}`,
+    "text-formatter"
   );
-  console.log(
-    `  Lines Deleted: -${summary.stats.totalDeletions.toLocaleString()}`
+  log.output(
+    `  Lines Added: +${summary.stats.totalInsertions.toLocaleString()}`,
+    "text-formatter"
+  );
+  log.output(
+    `  Lines Deleted: -${summary.stats.totalDeletions.toLocaleString()}`,
+    "text-formatter"
   );
   const netChange =
     summary.stats.totalInsertions - summary.stats.totalDeletions;
-  console.log(
-    `  Net Change: ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`
+  log.output(
+    `  Net Change: ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`,
+    "text-formatter"
   );
-  console.log(`  Active Days: ${summary.stats.activeDays}`);
-  console.log(`  Average Commits/Day: ${summary.stats.averageCommitsPerDay}`);
+  log.output(`  Active Days: ${summary.stats.activeDays}`, "text-formatter");
+  log.output(
+    `  Average Commits/Day: ${summary.stats.averageCommitsPerDay}`,
+    "text-formatter"
+  );
 
   // Productivity metrics
   const linesPerCommit =
@@ -66,8 +81,11 @@ export function printTextSummary(summary: any, verbose = false) {
     summary.stats.activeDays > 0
       ? (summary.stats.totalCommits / summary.stats.activeDays).toFixed(1)
       : "0";
-  console.log(`  Lines Changed/Commit: ${linesPerCommit.toLocaleString()}`);
-  console.log(`  Commits/Active Day: ${commitFrequency}\n`);
+  log.output(
+    `  Lines Changed/Commit: ${linesPerCommit.toLocaleString()}`,
+    "text-formatter"
+  );
+  log.output(`  Commits/Active Day: ${commitFrequency}\n`, "text-formatter");
 
   // Time-based patterns - declare variables with proper scope
   let workingHoursPercent = 0;
@@ -89,15 +107,18 @@ export function printTextSummary(summary: any, verbose = false) {
         ? Math.round((weekendCommits / summary.commits.length) * 100)
         : 0;
 
-    console.log("⏰ Time Patterns:");
-    console.log(
-      `  Working Hours (9-18): ${workingHoursCommits} commits (${workingHoursPercent}%)`
+    log.output("⏰ Time Patterns:", "text-formatter");
+    log.output(
+      `  Working Hours (9-18): ${workingHoursCommits} commits (${workingHoursPercent}%)`,
+      "text-formatter"
     );
-    console.log(
-      `  Weekend Commits: ${weekendCommits} commits (${weekendPercent}%)`
+    log.output(
+      `  Weekend Commits: ${weekendCommits} commits (${weekendPercent}%)`,
+      "text-formatter"
     );
-    console.log(
-      `  After Hours: ${summary.commits.length - workingHoursCommits} commits (${100 - workingHoursPercent}%)\n`
+    log.output(
+      `  After Hours: ${summary.commits.length - workingHoursCommits} commits (${100 - workingHoursPercent}%)\n`,
+      "text-formatter"
     );
   }
 
@@ -118,16 +139,19 @@ export function printTextSummary(summary: any, verbose = false) {
       (size: number) => size > 200
     ).length;
 
-    console.log("📏 Commit Sizes:");
-    console.log(`  Median lines changed: ${median}`);
-    console.log(
-      `  Small commits (≤50 lines): ${smallCommits} (${Math.round((smallCommits / summary.commits.length) * 100)}%)`
+    log.output("📏 Commit Sizes:", "text-formatter");
+    log.output(`  Median lines changed: ${median}`, "text-formatter");
+    log.output(
+      `  Small commits (≤50 lines): ${smallCommits} (${Math.round((smallCommits / summary.commits.length) * 100)}%)`,
+      "text-formatter"
     );
-    console.log(
-      `  Medium commits (51-200 lines): ${mediumCommits} (${Math.round((mediumCommits / summary.commits.length) * 100)}%)`
+    log.output(
+      `  Medium commits (51-200 lines): ${mediumCommits} (${Math.round((mediumCommits / summary.commits.length) * 100)}%)`,
+      "text-formatter"
     );
-    console.log(
-      `  Large commits (>200 lines): ${largeCommits} (${Math.round((largeCommits / summary.commits.length) * 100)}%)\n`
+    log.output(
+      `  Large commits (>200 lines): ${largeCommits} (${Math.round((largeCommits / summary.commits.length) * 100)}%)\n`,
+      "text-formatter"
     );
   }
 
@@ -137,21 +161,22 @@ export function printTextSummary(summary: any, verbose = false) {
       (sum: number, lang: any) => sum + lang.changes,
       0
     );
-    console.log("💻 Top Languages:");
+    log.output("💻 Top Languages:", "text-formatter");
     for (const lang of summary.stats.topLanguages.slice(0, 8)) {
       const percentage =
         totalChanges > 0 ? Math.round((lang.changes / totalChanges) * 100) : 0;
       const bar = "█".repeat(Math.max(1, Math.round(percentage / 5)));
-      console.log(
-        `  ${lang.language.padEnd(12)} ${lang.changes.toLocaleString().padStart(6)} changes (${percentage}%) ${bar}`
+      log.output(
+        `  ${lang.language.padEnd(12)} ${lang.changes.toLocaleString().padStart(6)} changes (${percentage}%) ${bar}`,
+        "text-formatter"
       );
     }
-    console.log("");
+    log.output("", "text-formatter");
   }
 
   // Enhanced repository breakdown for verbose mode
   if (verbose && summary.repositories.length > 1) {
-    console.log("📁 Repository Breakdown:");
+    log.output("📁 Repository Breakdown:", "text-formatter");
     for (const repo of summary.repositories) {
       const repoCommits = summary.commits
         ? summary.commits.filter((c: any) => c.repoId === repo.id).length
@@ -165,26 +190,30 @@ export function printTextSummary(summary: any, verbose = false) {
             )
         : 0;
 
-      console.log(`  📂 ${repo.name}`);
-      console.log(`     ${repo.path}`);
-      console.log(
-        `     ${repoCommits} commits, ${repoLines.toLocaleString()} lines changed`
+      log.output(`  📂 ${repo.name}`, "text-formatter");
+      log.output(`     ${repo.path}`, "text-formatter");
+      log.output(
+        `     ${repoCommits} commits, ${repoLines.toLocaleString()} lines changed`,
+        "text-formatter"
       );
       if (repo.remoteUrl) {
-        console.log(`     🔗 ${repo.remoteUrl}`);
+        log.output(`     🔗 ${repo.remoteUrl}`, "text-formatter");
       }
     }
-    console.log("");
+    log.output("", "text-formatter");
   }
 
   // Top files with more context
   if (verbose && summary.stats.topFiles && summary.stats.topFiles.length > 0) {
-    console.log("📄 Most Active Files:");
+    log.output("📄 Most Active Files:", "text-formatter");
     for (const file of summary.stats.topFiles.slice(0, 12)) {
       const activity = file.changes === 1 ? "change" : "changes";
-      console.log(`  📝 ${file.file} (${file.changes} ${activity})`);
+      log.output(
+        `  📝 ${file.file} (${file.changes} ${activity})`,
+        "text-formatter"
+      );
     }
-    console.log("");
+    log.output("", "text-formatter");
   }
 
   // Activity streak analysis
@@ -215,19 +244,24 @@ export function printTextSummary(summary: any, verbose = false) {
     }
     maxStreak = Math.max(maxStreak, currentStreak);
 
-    console.log("🔥 Activity Insights:");
-    console.log(`  Longest streak: ${maxStreak} consecutive days`);
-    console.log(
-      `  Most productive day: ${getMostProductiveDay(summary.commits)}`
+    log.output("🔥 Activity Insights:", "text-formatter");
+    log.output(
+      `  Longest streak: ${maxStreak} consecutive days`,
+      "text-formatter"
     );
-    console.log(
-      `  Consistency score: ${Math.round((summary.stats.activeDays / DateUtils.getDaysInPeriod(summary.period.startDate, summary.period.endDate)) * 100)}%\n`
+    log.output(
+      `  Most productive day: ${getMostProductiveDay(summary.commits)}`,
+      "text-formatter"
+    );
+    log.output(
+      `  Consistency score: ${Math.round((summary.stats.activeDays / DateUtils.getDaysInPeriod(summary.period.startDate, summary.period.endDate)) * 100)}%\n`,
+      "text-formatter"
     );
   }
 
   // Weekly activity pattern (simple ASCII chart)
   if (verbose && summary.commits && summary.commits.length > 0) {
-    console.log("📅 Weekly Activity Pattern:");
+    log.output("📅 Weekly Activity Pattern:", "text-formatter");
     const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const dayCommits = new Array(7).fill(0);
 
@@ -243,13 +277,16 @@ export function printTextSummary(summary: any, verbose = false) {
       const bar =
         "▓".repeat(Math.max(1, Math.round(percentage / 10))) +
         "░".repeat(Math.max(0, 10 - Math.round(percentage / 10)));
-      console.log(`  ${dayNames[i]} │${bar}│ ${count} commits`);
+      log.output(
+        `  ${dayNames[i]} │${bar}│ ${count} commits`,
+        "text-formatter"
+      );
     }
-    console.log("");
+    log.output("", "text-formatter");
   }
 
   // Summary and achievements
-  console.log("🏆 Summary & Achievements:");
+  log.output("🏆 Summary & Achievements:", "text-formatter");
   const achievements = [];
 
   if (summary.stats.totalCommits >= 100)
@@ -275,9 +312,11 @@ export function printTextSummary(summary: any, verbose = false) {
     achievements.push("🔀 Multi-tasker - Working on 5+ repositories!");
 
   if (achievements.length > 0) {
-    achievements.forEach((achievement) => console.log(`  ${achievement}`));
+    achievements.forEach((achievement) =>
+      log.output(`  ${achievement}`, "text-formatter")
+    );
   } else {
-    console.log("  Keep coding to unlock achievements! 💪");
+    log.output("  Keep coding to unlock achievements! 💪", "text-formatter");
   }
-  console.log("");
+  log.output("", "text-formatter");
 }

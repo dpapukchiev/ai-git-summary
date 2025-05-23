@@ -59,7 +59,7 @@ export class GitAnalyzer {
     // Get last synced date to optimize fetching
     const lastSyncDate = this.db.getLatestCommitDate(repo.id);
 
-    log.output(`Analyzing repository: ${repo.name}`);
+    log.output(`Analyzing repository: ${repo.name}`, "git-analyzer");
     log.debug(
       `Last sync: ${lastSyncDate ? lastSyncDate.toISOString() : "Never"}`,
       "git-analyzer"
@@ -68,7 +68,7 @@ export class GitAnalyzer {
     // Fetch commits since last sync
     const commits = await this.fetchCommits(git, lastSyncDate || undefined);
 
-    log.output(`Found ${commits.length} new commits`);
+    log.output(`Found ${commits.length} new commits`, "git-analyzer");
 
     if (commits.length > 0) {
       await this.processCommitsInParallel(git, repo.id!, commits);
@@ -83,7 +83,10 @@ export class GitAnalyzer {
     repoId: number,
     commits: readonly any[]
   ): Promise<void> {
-    log.output(`Processing commits with concurrency: ${this.concurrency}`);
+    log.output(
+      `Processing commits with concurrency: ${this.concurrency}`,
+      "git-analyzer"
+    );
 
     let processed = 0;
     const startTime = Date.now();
@@ -104,7 +107,8 @@ export class GitAnalyzer {
             const elapsed = (Date.now() - startTime) / 1000;
             const rate = processed / elapsed;
             log.output(
-              `✓ Processed ${processed}/${commits.length} commits (${rate.toFixed(1)} commits/sec)`
+              `✓ Processed ${processed}/${commits.length} commits (${rate.toFixed(1)} commits/sec)`,
+              "git-analyzer"
             );
           }
         } catch (error) {
@@ -125,13 +129,18 @@ export class GitAnalyzer {
     const failed = results.filter((r) => r.status === "rejected").length;
 
     log.output(
-      `🎉 Completed processing ${commits.length} commits in ${elapsed.toFixed(1)}s`
+      `🎉 Completed processing ${commits.length} commits in ${elapsed.toFixed(1)}s`,
+      "git-analyzer"
     );
-    log.output(`✅ Successful: ${successful}, ❌ Failed: ${failed}`);
+    log.output(
+      `✅ Successful: ${successful}, ❌ Failed: ${failed}`,
+      "git-analyzer"
+    );
 
     if (failed > 0) {
       log.output(
-        `⚠️  ${failed} commits failed to process. Check logs above for details.`
+        `⚠️  ${failed} commits failed to process. Check logs above for details.`,
+        "git-analyzer"
       );
     }
   }
@@ -437,10 +446,10 @@ export class GitAnalyzer {
   }
 
   async cleanup(): Promise<void> {
-    log.output("🧹 Cleaning up queue...");
+    log.output("🧹 Cleaning up queue...", "git-analyzer");
     this.queue.clear();
     await this.queue.onIdle();
-    log.output("✅ Queue cleanup completed");
+    log.output("✅ Queue cleanup completed", "git-analyzer");
   }
 
   getQueueStatus(): { size: number; pending: number; isPaused: boolean } {
@@ -455,23 +464,33 @@ export class GitAnalyzer {
     const repositories: Repository[] = [];
 
     log.output(
-      `🔍 Discovering repositories in ${searchPaths.length} search paths...`
+      `🔍 Discovering repositories in ${searchPaths.length} search paths...`,
+      "git-analyzer"
     );
 
     for (const searchPath of searchPaths) {
-      log.output(`📂 Scanning: ${searchPath}`);
+      log.output(`📂 Scanning: ${searchPath}`, "git-analyzer");
 
       if (!fs.existsSync(searchPath)) {
-        log.output(`⚠️  Search path does not exist: ${searchPath}`);
+        log.output(
+          `⚠️  Search path does not exist: ${searchPath}`,
+          "git-analyzer"
+        );
         continue;
       }
 
       const repos = await this.findGitRepositories(searchPath);
-      log.output(`   Found ${repos.length} repositories in this path`);
+      log.output(
+        `Found ${repos.length} repositories in this path`,
+        "git-analyzer"
+      );
       repositories.push(...repos);
     }
 
-    log.output(`📊 Total repositories discovered: ${repositories.length}`);
+    log.output(
+      `📊 Total repositories discovered: ${repositories.length}`,
+      "git-analyzer"
+    );
     return repositories;
   }
 
@@ -525,7 +544,10 @@ export class GitAnalyzer {
     organizationName: string,
     maxDepth: number = 3
   ): Promise<Repository[]> {
-    log.output(`\n🔍 Starting organization discovery for: ${organizationName}`);
+    log.output(
+      `🔍 Starting organization discovery for: ${organizationName}`,
+      "git-analyzer"
+    );
     log.debug(
       `📂 Searching in paths: ${searchPaths.join(", ")}`,
       "git-analyzer"
@@ -533,16 +555,22 @@ export class GitAnalyzer {
     log.debug(`📏 Max depth: ${maxDepth}`, "git-analyzer");
 
     const allRepositories = await this.discoverRepositories(searchPaths);
-    log.output(`📦 Found ${allRepositories.length} total repositories`);
+    log.output(
+      `📦 Found ${allRepositories.length} total repositories`,
+      "git-analyzer"
+    );
 
     if (allRepositories.length === 0) {
-      log.output(`⚠️  No repositories found in search paths`);
+      log.output(`⚠️  No repositories found in search paths`, "git-analyzer");
       return [];
     }
 
     const filteredRepositories: Repository[] = [];
 
-    log.output(`\n🔎 Checking each repository for organization match...`);
+    log.output(
+      `🔎 Checking each repository for organization match...`,
+      "git-analyzer"
+    );
 
     for (let i = 0; i < allRepositories.length; i++) {
       const repo = allRepositories[i];
@@ -555,10 +583,10 @@ export class GitAnalyzer {
       }
 
       log.debug(
-        `\n[${i + 1}/${allRepositories.length}] Checking: ${repo.name}`,
+        `[${i + 1}/${allRepositories.length}] Checking: ${repo.name}`,
         "git-analyzer"
       );
-      log.debug(`   📍 Path: ${repo.path}`, "git-analyzer");
+      log.debug(`📍 Path: ${repo.path}`, "git-analyzer");
 
       try {
         // Get remote URL for this repository
@@ -566,23 +594,26 @@ export class GitAnalyzer {
         const remoteUrl = await this.getRemoteUrl(git);
 
         if (remoteUrl) {
-          log.debug(`   🌐 Remote URL: ${remoteUrl}`, "git-analyzer");
+          log.debug(`🌐 Remote URL: ${remoteUrl}`, "git-analyzer");
           const remoteInfo = parseGitRemoteUrl(remoteUrl);
 
           if (remoteInfo) {
             log.debug(
-              `   🏢 Parsed organization: ${remoteInfo.organization}`,
+              `🏢 Parsed organization: ${remoteInfo.organization}`,
               "git-analyzer"
             );
             log.debug(
-              `   📊 Repository name: ${remoteInfo.repository}`,
+              `📊 Repository name: ${remoteInfo.repository}`,
               "git-analyzer"
             );
 
             if (
               organizationMatches(remoteInfo.organization, organizationName)
             ) {
-              log.output(`   ✅ MATCH! Adding to filtered results`);
+              log.output(
+                `✅ MATCH! Adding to filtered results`,
+                "git-analyzer"
+              );
               filteredRepositories.push({
                 id: repo.id,
                 name: repo.name,
@@ -593,35 +624,39 @@ export class GitAnalyzer {
               });
             } else {
               log.debug(
-                `   ❌ No match (expected: ${organizationName})`,
+                `❌ No match (expected: ${organizationName})`,
                 "git-analyzer"
               );
             }
           } else {
-            log.debug(`   ⚠️  Could not parse remote URL`, "git-analyzer");
+            log.debug(`⚠️  Could not parse remote URL`, "git-analyzer");
           }
         } else {
-          log.debug(`   ⚠️  No remote URL found`, "git-analyzer");
+          log.debug(`⚠️  No remote URL found`, "git-analyzer");
         }
       } catch (error) {
         log.debug(
-          `   ❌ Error checking remote for repository ${repo.path}`,
+          `❌ Error checking remote for repository ${repo.path}`,
           "git-analyzer"
         );
         log.debug(`Remote check error: ${error}`, "git-analyzer");
       }
     }
 
-    log.output(`\n🎯 Organization discovery complete!`);
+    log.output(`\n🎯 Organization discovery complete!`, "git-analyzer");
     log.output(
-      `📊 Found ${filteredRepositories.length} repositories matching organization: ${organizationName}`
+      `📊 Found ${filteredRepositories.length} repositories matching organization: ${organizationName}`,
+      "git-analyzer"
     );
 
     if (filteredRepositories.length > 0) {
-      log.output(`📋 Matching repositories:`);
+      log.output(`📋 Matching repositories:`, "git-analyzer");
       filteredRepositories.forEach((repo, index) => {
         if (repo) {
-          log.output(`   ${index + 1}. ${repo.name} (${repo.path})`);
+          log.output(
+            `   ${index + 1}. ${repo.name} (${repo.path})`,
+            "git-analyzer"
+          );
         }
       });
     }

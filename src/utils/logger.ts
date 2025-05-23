@@ -6,20 +6,7 @@ const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: "HH:mm:ss" }),
   winston.format.errors({ stack: true }),
   winston.format.printf(
-    ({ level, message, timestamp, stack, context, isOutput }): string => {
-      // For user-facing output (progress, status), show clean message without logging metadata
-      if (isOutput) {
-        return message as string;
-      }
-
-      const levelIcons = {
-        error: "❌",
-        warn: "⚠️ ",
-        info: "ℹ️ ",
-        debug: "🐛",
-        verbose: "📝",
-      };
-
+    ({ level, message, timestamp, stack, context }): string => {
       const levelColors = {
         error: chalk.red,
         warn: chalk.yellow,
@@ -28,11 +15,10 @@ const consoleFormat = winston.format.combine(
         verbose: chalk.gray,
       };
 
-      const icon = levelIcons[level as keyof typeof levelIcons] || "";
       const colorFn =
         levelColors[level as keyof typeof levelColors] || chalk.white;
 
-      let logMessage = `${chalk.gray(timestamp)} ${icon} ${colorFn(level.toUpperCase())}`;
+      let logMessage = `${chalk.gray(timestamp)} ${colorFn(level.toUpperCase())}`;
 
       if (context) {
         logMessage += ` ${chalk.cyan(`[${context}]`)}`;
@@ -111,7 +97,7 @@ export const log = {
   // Special method for user-facing output (progress, status updates)
   output: (message: string, context?: string) => {
     // Use info level for user-facing output, winston will handle console output
-    logger.info(message, { context, isOutput: true });
+    logger.info(message, { context });
   },
 };
 
