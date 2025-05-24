@@ -1,0 +1,159 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for Clean Code and Engineering Excellence
+
+## Code Quality Principles
+
+Write clean, maintainable, and testable code that follows these core principles:
+
+### 1. **Readability & Clarity**
+
+- Use descriptive, meaningful names for variables, functions, classes, and files
+- Write self-documenting code that explains the "what" and "why", not just the "how"
+- Keep functions and methods small and focused on a single responsibility
+- Use consistent naming conventions (camelCase for variables/functions, PascalCase for classes/types)
+- Prefer explicit over implicit code - clarity over cleverness
+
+### 2. **Code Organization & Structure**
+
+- Follow the existing project structure and patterns
+- Group related functionality together in logical modules
+- Use barrel exports (`index.ts`) to create clean public APIs
+- Separate concerns: business logic, data access, presentation, and configuration
+- Keep files focused and cohesive - split large files into smaller, focused modules
+
+### 3. **TypeScript Best Practices**
+
+- Always use strict TypeScript - enable all strict compiler options
+- Define explicit types for function parameters, return values, and complex objects
+- Use interfaces for object shapes and types for unions/primitives
+- Leverage TypeScript's type system to catch errors at compile time
+- Avoid `any` type - use proper typing or `unknown` when necessary
+- Use generic types to create reusable, type-safe components
+
+### 4. **Error Handling & Resilience**
+
+- Always handle errors explicitly - never ignore or swallow exceptions
+- Use Result/Either patterns or try-catch blocks with proper error types
+- Validate inputs at boundaries (API endpoints, CLI arguments, file operations)
+- Provide meaningful error messages that help users understand what went wrong
+- Log errors with appropriate context for debugging
+
+### 5. **Testing & Testability**
+
+- Write testable code by avoiding tight coupling and using dependency injection
+- Create unit tests for all business logic and utility functions
+- Use integration tests for complex workflows and external dependencies
+- Mock external dependencies (file system, network, databases) in tests
+- Aim for high test coverage but focus on meaningful test scenarios
+- Write tests that are readable and maintainable
+
+### 6. **Performance & Efficiency**
+
+- Use async/await properly for I/O operations
+- Implement proper caching strategies where appropriate
+- Use streaming for large data sets
+- Optimize database queries and avoid N+1 problems
+- Profile and measure performance before optimizing
+- Use appropriate data structures for the use case
+
+### 7. **Security Considerations**
+
+- Validate and sanitize all user inputs
+- Use environment variables for sensitive configuration
+- Never commit secrets or API keys to version control
+- Follow the principle of least privilege
+- Use secure dependencies and keep them updated
+
+## Project-Specific Guidelines
+
+### Dependencies & External Libraries
+
+- Use the existing dependencies (OpenAI, SQLite, Commander, etc.) consistently
+- Follow the established patterns for database operations with better-sqlite3
+- Use the configured logging system (Winston) for all application logging
+- Leverage the existing CLI framework (Commander) for new commands
+
+### Coding Standards
+
+- Follow the existing ESLint configuration
+- Use Prettier for consistent code formatting
+- Write JSDoc comments for public APIs and complex functions
+- Use meaningful commit messages following EU git commit format
+
+## Code Review Checklist
+
+Before suggesting any code changes, ensure:
+
+- [ ] Code is properly typed with TypeScript
+- [ ] Error handling is implemented and appropriate
+- [ ] Functions have single responsibilities
+- [ ] Names are descriptive and follow conventions
+- [ ] Code is testable and includes tests where appropriate
+- [ ] No sensitive data is hardcoded
+- [ ] Dependencies are used efficiently
+- [ ] Code follows existing project patterns
+- [ ] Documentation is updated if needed
+
+## Examples of Clean Code Patterns
+
+### Good Function Design
+
+```typescript
+// ✅ Good: Clear purpose, typed, error handling
+async function parseGitCommits(
+  repoPath: string
+): Promise<Result<Commit[], GitError>> {
+  try {
+    const git = simpleGit(repoPath);
+    const log = await git.log();
+    return success(log.all.map(transformToCommit));
+  } catch (error) {
+    return failure(new GitError("Failed to parse commits", error));
+  }
+}
+```
+
+### Good Type Definitions
+
+```typescript
+// ✅ Good: Clear interfaces, proper typing
+interface CommitSummary {
+  readonly hash: string;
+  readonly message: string;
+  readonly author: Author;
+  readonly timestamp: Date;
+  readonly filesChanged: readonly string[];
+}
+
+type SummaryLevel = "brief" | "detailed" | "comprehensive";
+```
+
+### Good Error Handling
+
+```typescript
+// ✅ Good: Explicit error types, helpful messages
+class GitError extends Error {
+  constructor(
+    message: string,
+    public readonly cause?: unknown,
+    public readonly code?: string
+  ) {
+    super(message);
+    this.name = "GitError";
+  }
+}
+```
+
+## Remember
+
+- **Maintainability**: Code is read far more often than it's written
+- **Testability**: If it's hard to test, it's probably poorly designed
+- **Simplicity**: Prefer simple solutions over complex ones
+- **Consistency**: Follow the existing codebase patterns and conventions
+- **Documentation**: Good code tells a story that others can follow
+
+Always prioritize code that is easy to understand, modify, and extend over code that is merely clever or compact.

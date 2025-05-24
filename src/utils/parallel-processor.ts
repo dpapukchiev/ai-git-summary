@@ -1,5 +1,7 @@
+import PQueue from "p-queue";
+
 /**
- * Utility for processing items in parallel with configurable concurrency
+ * Utility for processing items in parallel with configurable concurrency using p-queue
  */
 export interface ProcessResult {
   success: boolean;
@@ -19,8 +21,14 @@ export type ProgressCallback<T> = (
   success: boolean
 ) => void;
 
+export interface ParallelProcessingOptions {
+  concurrency?: number;
+  timeout?: number;
+  throwOnTimeout?: boolean;
+}
+
 /**
- * Process items in parallel with configurable concurrency
+ * Process items in parallel with configurable concurrency using p-queue
  */
 export async function processInParallel<T>(
   items: T[],
@@ -28,14 +36,44 @@ export async function processInParallel<T>(
   concurrency: number = 3,
   progressCallback?: ProgressCallback<T>
 ): Promise<ParallelProcessingResult<T>> {
+  return processInParallelWithOptions(
+    items,
+    processor,
+    { concurrency },
+    progressCallback
+  );
+}
+
+/**
+ * Process items in parallel with full configuration options
+ */
+export async function processInParallelWithOptions<T>(
+  items: T[],
+  processor: (item: T) => Promise<ProcessResult>,
+  options: ParallelProcessingOptions = {},
+  progressCallback?: ProgressCallback<T>
+): Promise<ParallelProcessingResult<T>> {
+  const {
+    concurrency = 3,
+    timeout = 60000, // 60 seconds default
+    throwOnTimeout = false,
+  } = options;
+
+  const queue = new PQueue({
+    concurrency,
+    timeout,
+    throwOnTimeout,
+  });
+
   const results: ParallelProcessingResult<T> = {
     completed: 0,
     failed: 0,
     errors: [],
   };
 
-  const processChunk = async (chunk: T[]) => {
-    const promises = chunk.map(async (item) => {
+  // Create tasks for all items
+  const tasks = items.map((item) =>
+    queue.add(async () => {
       try {
         const result = await processor(item);
         if (result.success) {
@@ -66,16 +104,11 @@ export async function processInParallel<T>(
           false
         );
       }
-    });
+    })
+  );
 
-    await Promise.all(promises);
-  };
-
-  // Process items in chunks to control concurrency
-  for (let i = 0; i < items.length; i += concurrency) {
-    const chunk = items.slice(i, i + concurrency);
-    await processChunk(chunk);
-  }
+  // Wait for all tasks to complete
+  await Promise.allSettled(tasks);
 
   return results;
 }

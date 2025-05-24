@@ -8,7 +8,7 @@ import { CommitProcessor } from "./commit-processor";
 import { CommitFetcher } from "./commit-fetcher";
 import { RepositoryDiscovery } from "./repository-discovery";
 import { GitRemoteHandler } from "./git-remote-handler";
-import { ParallelProcessor } from "./parallel-processor";
+import { processInParallel, ProcessResult } from "../utils/parallel-processor";
 
 export class GitAnalyzer {
   private db: DatabaseManager;
@@ -16,7 +16,7 @@ export class GitAnalyzer {
   private commitFetcher: CommitFetcher;
   private repositoryDiscovery: RepositoryDiscovery;
   private gitRemoteHandler: GitRemoteHandler;
-  private parallelProcessor: ParallelProcessor;
+  private concurrency: number;
 
   constructor(db: DatabaseManager, options?: { concurrency?: number }) {
     this.db = db;
@@ -24,7 +24,7 @@ export class GitAnalyzer {
     this.commitFetcher = new CommitFetcher();
     this.repositoryDiscovery = new RepositoryDiscovery();
     this.gitRemoteHandler = new GitRemoteHandler();
-    this.parallelProcessor = new ParallelProcessor(options?.concurrency || 5);
+    this.concurrency = options?.concurrency || 5;
   }
 
   async analyzeRepository(repoPath: string, repoName?: string): Promise<void> {
@@ -48,15 +48,86 @@ export class GitAnalyzer {
     log.output(`Found ${commits.length} new commits`, "git-analyzer");
 
     if (commits.length > 0) {
-      await this.parallelProcessor.processCommitsInParallel(
-        git,
-        repo.id,
-        commits,
-        this.commitProcessor
+      const startTime = Date.now();
+      let processed = 0;
+
+      log.output(
+        `Processing commits with concurrency: ${this.concurrency}`,
+        "git-analyzer"
+      );
+
+      const results = await processInParallel(
+        [...commits],
+        async (commit): Promise<ProcessResult> => {
+          log.debug(`Processing commit: ${commit?.hash}`, "git-analyzer");
+
+          try {
+            await this.commitProcessor.processCommit(git, repo.id, commit);
+            return { success: true };
+          } catch (error) {
+            log.error(
+              `Failed to process commit ${commit?.hash}`,
+              error as Error,
+              "git-analyzer"
+            );
+            return { success: false, error };
+          }
+        },
+        this.concurrency,
+        (completed, total, commit, success) => {
+          processed = completed;
+          this.logProgress(completed, total, startTime);
+        }
+      );
+
+      const totalTime = (Date.now() - startTime) / 1000;
+      this.logFinalResults(
+        commits.length,
+        totalTime,
+        results.completed,
+        results.failed
       );
     }
 
     this.db.updateRepositoryLastSynced(repo.id, new Date());
+  }
+
+  private logProgress(
+    processed: number,
+    total: number,
+    startTime: number
+  ): void {
+    if (processed % 10 === 0 || processed === total) {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const rate = processed / elapsed;
+      log.output(
+        `✓ Processed ${processed}/${total} commits (${rate.toFixed(1)} commits/sec)`,
+        "git-analyzer"
+      );
+    }
+  }
+
+  private logFinalResults(
+    totalCommits: number,
+    totalTime: number,
+    successful: number,
+    failed: number
+  ): void {
+    log.output(
+      `🎉 Completed processing ${totalCommits} commits in ${totalTime.toFixed(1)}s`,
+      "git-analyzer"
+    );
+    log.output(
+      `✅ Successful: ${successful}, ❌ Failed: ${failed}`,
+      "git-analyzer"
+    );
+
+    if (failed > 0) {
+      log.output(
+        `⚠️  ${failed} commits failed to process. Check logs above for details.`,
+        "git-analyzer"
+      );
+    }
   }
 
   private validateRepositoryPath(repoPath: string): void {
@@ -94,14 +165,6 @@ export class GitAnalyzer {
     }
 
     return repo as Repository & { id: number };
-  }
-
-  async cleanup(): Promise<void> {
-    await this.parallelProcessor.cleanup();
-  }
-
-  getQueueStatus(): { size: number; pending: number; isPaused: boolean } {
-    return this.parallelProcessor.getQueueStatus();
   }
 
   async discoverRepositories(searchPaths: string[]): Promise<Repository[]> {
