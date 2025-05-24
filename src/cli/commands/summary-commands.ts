@@ -5,6 +5,7 @@ import { GitUtils } from "../../utils/git-utils";
 import { PeriodType } from "../../types";
 import { formatSummary, OutputFormat } from "../../formatters";
 import { log } from "../../utils/logger";
+import { formatRepositoryDetail } from "../../formatters/repository-detail-formatter";
 
 /**
  * Add summary commands to the CLI program
@@ -141,7 +142,7 @@ export function addSummaryCommands(
           }
         }
 
-        const timePeriod = DateUtils.getPeriod("1week", startDate, endDate); // Using custom dates
+        const timePeriod = DateUtils.getPeriod("1week", startDate, endDate);
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
           options.repos,
@@ -151,6 +152,94 @@ export function addSummaryCommands(
         formatSummary(summary, options.format as OutputFormat, options.verbose);
       } catch (error) {
         log.error("Error generating summary", error as Error, "cli");
+        process.exit(1);
+      }
+    });
+
+  // Repository detail command
+  program
+    .command("repo-detail")
+    .description("Analyze a specific repository in detail")
+    .requiredOption("-r, --repo <repo>", "Repository name or path to analyze")
+    .option(
+      "--period <period>",
+      "Time period (1week, 1month, 3months, 6months, 1year, ytd)",
+      "1month"
+    )
+    .option("--from <date>", "Start date (YYYY-MM-DD) for custom period")
+    .option("--to <date>", "End date (YYYY-MM-DD) for custom period")
+    .option("-a, --author <author>", "Filter commits by author name or email")
+    .option("--me", "Filter commits by current git user")
+    .option(
+      "-f, --format <format>",
+      "Output format (text, json, markdown)",
+      "text"
+    )
+    .option("-v, --verbose", "Verbose output")
+    .action(async (options) => {
+      try {
+        if (options.verbose) {
+          log.info(`🔍 Analyzing repository: ${options.repo}...`, "cli");
+        }
+
+        // Handle author filtering
+        let author = options.author;
+        if (options.me) {
+          const currentUser = GitUtils.getCurrentUser();
+          if (!currentUser) {
+            log.error(
+              "Could not determine current git user. Please set git config user.name or user.email",
+              undefined,
+              "cli"
+            );
+            process.exit(1);
+          }
+          author = currentUser;
+          if (options.verbose) {
+            log.info(`🔍 Filtering commits by current user: ${author}`, "cli");
+          }
+        }
+
+        // Determine time period
+        let timePeriod;
+        if (options.from && options.to) {
+          const startDate = new Date(options.from);
+          const endDate = new Date(options.to);
+
+          if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            log.error(
+              "Invalid date format. Use YYYY-MM-DD format.",
+              undefined,
+              "cli"
+            );
+            process.exit(1);
+          }
+
+          if (startDate >= endDate) {
+            log.error("Start date must be before end date.", undefined, "cli");
+            process.exit(1);
+          }
+
+          timePeriod = DateUtils.getPeriod("1week", startDate, endDate);
+        } else {
+          timePeriod = DateUtils.getPeriod(options.period as any);
+        }
+
+        // Generate summary for the specific repository
+        const summary = await dataAggregator.generateWorkSummary(
+          timePeriod,
+          [options.repo],
+          author
+        );
+
+        // Format and display the detailed repository analysis
+        await formatRepositoryDetail(
+          summary,
+          options.format as OutputFormat,
+          options.verbose
+        );
+      } catch (error) {
+        log.error("Error analyzing repository", error as Error, "cli");
         process.exit(1);
       }
     });
