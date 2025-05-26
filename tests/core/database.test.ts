@@ -1,9 +1,9 @@
 import { DatabaseManager } from '../../src/storage/database';
 import {
-  createMockCommit,
-  createMockRepository,
+  CommitBuilder,
+  RepositoryBuilder,
   createTestDatabase,
-} from '../helpers/test-fixtures';
+} from '../helpers';
 
 describe('DatabaseManager', () => {
   let db: DatabaseManager;
@@ -21,9 +21,9 @@ describe('DatabaseManager', () => {
   describe('repository operations', () => {
     it('should add and retrieve repositories', () => {
       // Act: Add a repository
-      const mockRepo = createMockRepository({
-        remoteUrl: TEST_REPO_URL,
-      });
+      const mockRepo = RepositoryBuilder.create()
+        .withRemoteUrl(TEST_REPO_URL)
+        .build();
 
       const repoId = db.addRepository(mockRepo);
 
@@ -44,9 +44,9 @@ describe('DatabaseManager', () => {
 
     it('should retrieve repository by path', () => {
       // Setup: Add a repository
-      const mockRepo = createMockRepository({
-        remoteUrl: TEST_REPO_URL,
-      });
+      const mockRepo = RepositoryBuilder.create()
+        .withRemoteUrl(TEST_REPO_URL)
+        .build();
 
       db.addRepository(mockRepo);
 
@@ -69,9 +69,9 @@ describe('DatabaseManager', () => {
 
     it('should update repository last synced date', () => {
       // Setup: Add a repository
-      const mockRepo = createMockRepository({
-        remoteUrl: TEST_REPO_URL,
-      });
+      const mockRepo = RepositoryBuilder.create()
+        .withRemoteUrl(TEST_REPO_URL)
+        .build();
 
       const repoId = db.addRepository(mockRepo);
       const syncDate = new Date('2024-01-15T10:00:00Z');
@@ -90,16 +90,16 @@ describe('DatabaseManager', () => {
 
     beforeEach(() => {
       // Setup: Add a test repository
-      const mockRepo = createMockRepository({
-        remoteUrl: TEST_REPO_URL,
-      });
+      const mockRepo = RepositoryBuilder.create()
+        .withRemoteUrl(TEST_REPO_URL)
+        .build();
 
       repoId = db.addRepository(mockRepo);
     });
 
     it('should add and retrieve commits', () => {
       // Setup: Create a mock commit
-      const commit = createMockCommit({ repoId });
+      const commit = CommitBuilder.create().withRepoId(repoId).build();
 
       // Act: Add commit
       const commitId = db.addCommit(commit);
@@ -124,9 +124,15 @@ describe('DatabaseManager', () => {
       const olderDate = new Date('2024-01-10T10:00:00Z');
       const newerDate = new Date('2024-01-15T10:00:00Z');
 
-      db.addCommit(createMockCommit({ repoId, date: olderDate }));
       db.addCommit(
-        createMockCommit({ repoId, date: newerDate, hash: 'newer-hash' })
+        CommitBuilder.create().withRepoId(repoId).withDate(olderDate).build()
+      );
+      db.addCommit(
+        CommitBuilder.create()
+          .withRepoId(repoId)
+          .withDate(newerDate)
+          .withHash('newer-hash')
+          .build()
       );
 
       // Act: Get latest commit date

@@ -18,11 +18,5 @@ export {
   FakeTestUtils,
 } from './test-fakes';
 
-// Legacy test fixtures (deprecated but maintained for compatibility)
-export {
-  createMockCommit,
-  createMockCommits,
-  createMockRepository,
-  createMockTimePeriod,
-  createTestDatabase,
-} from './test-fixtures';
+// Database utilities
+export { createTestDatabase } from './test-fixtures';
