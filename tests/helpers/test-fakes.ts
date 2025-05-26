@@ -1,16 +1,26 @@
 import { CommitStatsService } from '../../src/core/commit-stats-service';
 import { CommitStats, GitOperations } from '../../src/core/git-operations';
 
+interface DiffSummaryResponse {
+  filesChanged: number;
+  insertions: number;
+  deletions: number;
+}
+
 /**
  * Fake implementation of GitOperations for testing
  * Much simpler and more explicit than mocking
  */
 export class FakeGitOperations implements GitOperations {
-  private diffSummaryResponses = new Map<string, any>();
+  private diffSummaryResponses = new Map<string, DiffSummaryResponse>();
   private diffNumstatResponses = new Map<string, string>();
   private errors = new Map<string, Error>();
 
-  setDiffSummaryResponse(fromRef: string, toRef: string, response: any): void {
+  setDiffSummaryResponse(
+    fromRef: string,
+    toRef: string,
+    response: DiffSummaryResponse
+  ): void {
     const key = `${fromRef}..${toRef}`;
     this.diffSummaryResponses.set(key, response);
   }
@@ -29,7 +39,10 @@ export class FakeGitOperations implements GitOperations {
     this.errors.set(key, error);
   }
 
-  async getDiffSummary(fromRef: string, toRef: string): Promise<any> {
+  async getDiffSummary(
+    fromRef: string,
+    toRef: string
+  ): Promise<DiffSummaryResponse> {
     const key = `${fromRef}..${toRef}`;
 
     if (this.errors.has(key)) {
@@ -147,8 +160,8 @@ export class FakeCommitStatsService extends CommitStatsService {
   private errors = new Map<string, Error>();
 
   constructor() {
-    // Pass null since we won't use the real git operations
-    super(null as any);
+    // Pass a fake GitOperations instance instead of null
+    super(new FakeGitOperations());
   }
 
   setResponse(hash: string, stats: CommitStats): void {

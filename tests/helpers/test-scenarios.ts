@@ -1,5 +1,5 @@
 import { DatabaseManager } from '../../src/storage/database';
-import { Commit, Repository } from '../../src/types';
+import { Commit, FileChange, Repository } from '../../src/types';
 import {
   CommitBuilder,
   FileChangeBuilder,
@@ -367,7 +367,10 @@ export class TestScenarios {
   /**
    * Helper method to add file changes for a commit
    */
-  private addFileChangesForCommit(commitId: number, fileChanges: any[]): void {
+  private addFileChangesForCommit(
+    commitId: number,
+    fileChanges: FileChange[]
+  ): void {
     fileChanges.forEach(fileChange => {
       this.db.addFileChange(fileChange);
     });
