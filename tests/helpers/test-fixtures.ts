@@ -51,10 +51,8 @@ export const createMockTimePeriod = (
 let dbCounter = 0;
 
 export const createTestDatabase = (): DatabaseManager => {
-  // Create a truly unique in-memory database for each test
-  dbCounter++;
-  const uniqueName = `:memory:test_${dbCounter}_${Date.now()}_${Math.random()}`;
-  return new DatabaseManager(uniqueName);
+  // Use in-memory database for tests
+  return new DatabaseManager(':memory:');
 };
 
 export const createMockCommits = (

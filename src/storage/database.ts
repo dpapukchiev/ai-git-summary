@@ -50,13 +50,20 @@ export class DatabaseManager {
   private dbPath: string;
 
   constructor(dataDir: string = './data') {
-    // Ensure data directory exists
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+    // Handle in-memory databases
+    if (dataDir.startsWith(':memory:')) {
+      this.dbPath = dataDir;
+      this.db = new Database(this.dbPath);
+    } else {
+      // Ensure data directory exists for file-based databases
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+
+      this.dbPath = path.join(dataDir, 'git-summary.db');
+      this.db = new Database(this.dbPath);
     }
 
-    this.dbPath = path.join(dataDir, 'git-summary.db');
-    this.db = new Database(this.dbPath);
     this.setupSchema();
   }
 
@@ -371,7 +378,9 @@ export class DatabaseManager {
       'deleted',
       'renamed',
     ] as const;
-    const changeType = validChangeTypes.includes(row.change_type as any)
+    const changeType = validChangeTypes.includes(
+      row.change_type as (typeof validChangeTypes)[number]
+    )
       ? (row.change_type as 'added' | 'modified' | 'deleted' | 'renamed')
       : 'modified'; // Default fallback
 
