@@ -1,17 +1,17 @@
-import { DateUtils } from '../utils/date-utils';
-import { log } from '../utils/logger';
-import {
-  CommitSizeMetrics,
-  TimePatterns,
-  ActivityMetrics,
-  WeeklyPattern,
-  COMMIT_SIZE_THRESHOLDS,
-  DISPLAY_LIMITS,
-} from './types';
 import {
   ComprehensiveWorkSummary,
   RepositoryContribution,
 } from '../core/analytics-engine';
+import { DateUtils } from '../utils/date-utils';
+import { log } from '../utils/logger';
+import {
+  ActivityMetrics,
+  COMMIT_SIZE_THRESHOLDS,
+  CommitSizeMetrics,
+  DISPLAY_LIMITS,
+  TimePatterns,
+  WeeklyPattern,
+} from './types';
 
 /**
  * Formatter for different sections of the summary
@@ -199,14 +199,18 @@ class SummaryFormatter {
   }
 
   static formatTopLanguages(
-    topLanguages: any[],
+    topLanguages: Array<{ language: string; changes: number }>,
     verbose: boolean = false,
-    otherFilesAnalysis?: any
+    otherFilesAnalysis?: {
+      commonExtensions?: Array<{ extension: string; count: number }>;
+      otherFiles?: Array<{ filePath: string; changes: number }>;
+    }
   ): void {
     if (!topLanguages || topLanguages.length === 0) return;
 
     const totalChanges = topLanguages.reduce(
-      (sum: number, lang: any) => sum + lang.changes,
+      (sum: number, lang: { language: string; changes: number }) =>
+        sum + lang.changes,
       0
     );
     log.output('💻 Top Languages:', this.CONTEXT);
@@ -258,7 +262,10 @@ class SummaryFormatter {
         log.output('', this.CONTEXT);
         log.output("🔍 'Other' Files Analysis:", this.CONTEXT);
 
-        if (otherFilesAnalysis.commonExtensions?.length > 0) {
+        if (
+          otherFilesAnalysis.commonExtensions &&
+          otherFilesAnalysis.commonExtensions.length > 0
+        ) {
           log.output(
             '   📋 Most common unrecognized extensions:',
             this.CONTEXT
@@ -271,7 +278,10 @@ class SummaryFormatter {
           }
         }
 
-        if (otherFilesAnalysis.otherFiles?.length > 0) {
+        if (
+          otherFilesAnalysis.otherFiles &&
+          otherFilesAnalysis.otherFiles.length > 0
+        ) {
           log.output("   📄 Top 'Other' files by changes:", this.CONTEXT);
           for (const file of otherFilesAnalysis.otherFiles.slice(0, 8)) {
             const fileName = file.filePath.split('/').pop() || file.filePath;
@@ -320,7 +330,10 @@ class SummaryFormatter {
     log.output('', this.CONTEXT);
   }
 
-  static formatTopFiles(topFiles: any[], verbose: boolean): void {
+  static formatTopFiles(
+    topFiles: Array<{ file: string; changes: number }>,
+    verbose: boolean
+  ): void {
     if (!verbose || !topFiles || topFiles.length === 0) return;
 
     log.output('📄 Most Active Files:', this.CONTEXT);

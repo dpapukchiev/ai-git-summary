@@ -1,7 +1,49 @@
 import Database from 'better-sqlite3';
-import path from 'path';
 import fs from 'fs';
-import { Repository, Commit, FileChange, CachedSummary } from '../types';
+import path from 'path';
+import { CachedSummary, Commit, FileChange, Repository } from '../types';
+
+// Database row interfaces
+interface RepositoryRow {
+  id: number;
+  name: string;
+  path: string;
+  remote_url?: string;
+  last_synced?: string;
+  weight?: number;
+}
+
+interface CommitRow {
+  id: number;
+  repo_id: number;
+  hash: string;
+  author: string;
+  email: string;
+  date: string;
+  message: string;
+  files_changed: number;
+  insertions: number;
+  deletions: number;
+  branch?: string;
+}
+
+interface FileChangeRow {
+  id: number;
+  commit_id: number;
+  file_path: string;
+  change_type: string;
+  insertions: number;
+  deletions: number;
+}
+
+interface CachedSummaryRow {
+  id: number;
+  period_type: string;
+  start_date: string;
+  end_date: string;
+  content: string;
+  generated_at: string;
+}
 
 export class DatabaseManager {
   private db: Database.Database;
@@ -96,13 +138,13 @@ export class DatabaseManager {
 
   getRepository(path: string): Repository | null {
     const stmt = this.db.prepare('SELECT * FROM repositories WHERE path = ?');
-    const row = stmt.get(path) as any;
+    const row = stmt.get(path) as RepositoryRow;
     return row ? this.mapRepository(row) : null;
   }
 
   getAllRepositories(): Repository[] {
     const stmt = this.db.prepare('SELECT * FROM repositories ORDER BY name');
-    const rows = stmt.all() as any[];
+    const rows = stmt.all() as RepositoryRow[];
     return rows.map(this.mapRepository);
   }
 
@@ -119,7 +161,7 @@ export class DatabaseManager {
     const existingStmt = this.db.prepare(`
       SELECT id FROM commits WHERE repo_id = ? AND hash = ?
     `);
-    const existing = existingStmt.get(commit.repoId, commit.hash) as any;
+    const existing = existingStmt.get(commit.repoId, commit.hash) as CommitRow;
 
     if (existing) {
       return existing.id;
@@ -152,7 +194,7 @@ export class DatabaseManager {
     endDate?: Date
   ): Commit[] {
     let query = 'SELECT * FROM commits WHERE repo_id = ?';
-    const params: any[] = [repoId];
+    const params: (number | string)[] = [repoId];
 
     if (startDate) {
       query += ' AND date >= ?';
@@ -167,7 +209,7 @@ export class DatabaseManager {
     query += ' ORDER BY date DESC';
 
     const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params) as any[];
+    const rows = stmt.all(...params) as CommitRow[];
     return rows.map(this.mapCommit);
   }
 
@@ -178,7 +220,10 @@ export class DatabaseManager {
     author?: string
   ): Commit[] {
     let query = 'SELECT * FROM commits WHERE date >= ? AND date <= ?';
-    const params: any[] = [startDate.toISOString(), endDate.toISOString()];
+    const params: (number | string)[] = [
+      startDate.toISOString(),
+      endDate.toISOString(),
+    ];
 
     if (repoIds && repoIds.length > 0) {
       query += ` AND repo_id IN (${repoIds.map(() => '?').join(',')})`;
@@ -193,7 +238,7 @@ export class DatabaseManager {
     query += ' ORDER BY date DESC';
 
     const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params) as any[];
+    const rows = stmt.all(...params) as CommitRow[];
     return rows.map(this.mapCommit);
   }
 
@@ -201,7 +246,7 @@ export class DatabaseManager {
     const stmt = this.db.prepare(
       'SELECT MAX(date) as latest_date FROM commits WHERE repo_id = ?'
     );
-    const result = stmt.get(repoId) as any;
+    const result = stmt.get(repoId) as { latest_date?: string } | undefined;
     return result?.latest_date ? new Date(result.latest_date) : null;
   }
 
@@ -225,7 +270,7 @@ export class DatabaseManager {
     const stmt = this.db.prepare(
       'SELECT * FROM file_changes WHERE commit_id = ?'
     );
-    const rows = stmt.all(commitId) as any[];
+    const rows = stmt.all(commitId) as FileChangeRow[];
     return rows.map(this.mapFileChange);
   }
 
@@ -239,7 +284,10 @@ export class DatabaseManager {
       INNER JOIN commits c ON fc.commit_id = c.id
       WHERE c.date >= ? AND c.date <= ?
     `;
-    const params: any[] = [startDate.toISOString(), endDate.toISOString()];
+    const params: (number | string)[] = [
+      startDate.toISOString(),
+      endDate.toISOString(),
+    ];
 
     if (repoIds && repoIds.length > 0) {
       query += ` AND c.repo_id IN (${repoIds.map(() => '?').join(',')})`;
@@ -249,7 +297,7 @@ export class DatabaseManager {
     query += ' ORDER BY c.date DESC';
 
     const stmt = this.db.prepare(query);
-    const rows = stmt.all(...params) as any[];
+    const rows = stmt.all(...params) as FileChangeRow[];
     return rows.map(this.mapFileChange);
   }
 
@@ -269,7 +317,7 @@ export class DatabaseManager {
       periodType,
       startDate.toISOString().split('T')[0],
       endDate.toISOString().split('T')[0]
-    ) as any;
+    ) as CachedSummaryRow;
     return row ? this.mapCachedSummary(row) : null;
   }
 
@@ -288,7 +336,7 @@ export class DatabaseManager {
   }
 
   // Utility methods
-  private mapRepository(row: any): Repository {
+  private mapRepository(row: RepositoryRow): Repository {
     return {
       id: row.id,
       name: row.name,
@@ -299,7 +347,7 @@ export class DatabaseManager {
     };
   }
 
-  private mapCommit(row: any): Commit {
+  private mapCommit(row: CommitRow): Commit {
     return {
       id: row.id,
       repoId: row.repo_id,
@@ -315,7 +363,7 @@ export class DatabaseManager {
     };
   }
 
-  private mapFileChange(row: any): FileChange {
+  private mapFileChange(row: FileChangeRow): FileChange {
     return {
       id: row.id,
       commitId: row.commit_id,
@@ -326,7 +374,7 @@ export class DatabaseManager {
     };
   }
 
-  private mapCachedSummary(row: any): CachedSummary {
+  private mapCachedSummary(row: CachedSummaryRow): CachedSummary {
     return {
       id: row.id,
       periodType: row.period_type,
