@@ -1,6 +1,8 @@
 # AI Git Summary
 
-An intelligent git activity analyzer that provides comprehensive summaries of your coding work across different time periods. Track your productivity, analyze patterns, and get AI-powered insights into your development activities.
+An intelligent git activity analyzer that provides comprehensive summaries of your coding work
+across different time periods. Track your productivity, analyze patterns, and get AI-powered
+insights into your development activities.
 
 ## Features
 
@@ -13,6 +15,68 @@ An intelligent git activity analyzer that provides comprehensive summaries of yo
 - 📄 **Multiple Formats** - Text, JSON, and Markdown output
 - 👤 **Author Filtering** - Filter commits by specific authors or current user
 - 🏢 **Organization Support** - Add all repositories from a specific organization
+
+## How It Works
+
+AI Git Summary is designed around a simple but powerful workflow that transforms your scattered git
+repositories into meaningful productivity insights.
+
+### The Big Picture
+
+Think of it as your personal coding activity tracker. Instead of manually checking each repository
+to see what you've been working on, the tool automatically collects, processes, and summarizes your
+git activity across all your projects.
+
+### Core Workflow
+
+1. **📁 Repository Discovery & Registration**
+
+   - You tell the tool about your repositories (either individually or by scanning directories)
+   - The tool registers them in a local SQLite database with metadata like path, name, and remote
+     URL
+
+2. **🔄 Data Collection & Sync**
+
+   - The tool reads git history from each repository using `simple-git`
+   - Commit data is extracted: author, timestamp, message, file changes, insertions/deletions
+   - Data is stored locally and incrementally updated (only new commits since last sync)
+
+3. **📊 Analysis & Aggregation**
+
+   - When you request a summary, the tool queries the database for the specified time period
+   - Raw commit data is processed into meaningful statistics: commit frequency, language breakdown,
+     productivity trends
+   - File extensions are analyzed to determine programming languages used
+
+4. **📋 Summary Generation**
+   - Statistics are formatted into human-readable summaries (text, JSON, or Markdown)
+   - You can filter by author, repository, or time period to get exactly the insights you need
+
+### Data Flow
+
+```
+Git Repositories → Local Database → Analysis Engine → Formatted Output
+     ↓                 ↓                ↓              ↓
+  [Commits]        [Cached Data]    [Statistics]   [Summary Report]
+```
+
+### Key Benefits of This Approach
+
+- **Offline-First**: Once synced, you can generate summaries without internet access
+- **Fast**: Incremental updates mean only new data is processed
+- **Flexible**: Same data can be viewed in different time periods and formats
+- **Privacy**: All data stays on your machine
+- **Scalable**: Handles multiple repositories efficiently with concurrent processing
+
+### Typical User Journey
+
+1. **Setup**: Add your repositories once using `add-repo` or `discover`
+2. **Daily**: Run `sync` to keep data current (or let it auto-sync during summary generation)
+3. **Regular**: Generate summaries (`week`, `month`, etc.) to track your progress
+4. **Reporting**: Export summaries in different formats for sharing or record-keeping
+
+This architecture makes it easy to get insights into your coding patterns without disrupting your
+normal development workflow.
 
 ## Installation
 
