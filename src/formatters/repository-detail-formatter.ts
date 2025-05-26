@@ -1,6 +1,7 @@
 import { DateUtils } from "../utils/date-utils";
 import { log } from "../utils/logger";
 import { WorkSummary } from "../types";
+import { TimePatternCalculator } from "./calculators";
 import { OutputFormat } from "./index";
 
 /**
@@ -281,36 +282,60 @@ function printRepositoryDetailText(
     log.output("", "repo-detail");
   }
 
-  // Time patterns
+  // Time patterns with enhanced analysis
   if (repoCommits.length > 0) {
+    const timePatterns = TimePatternCalculator.calculate(repoCommits);
+
     log.output("⏰ Activity Patterns:", "repo-detail");
-
-    const workingHoursCommits = repoCommits.filter((c) =>
-      DateUtils.isWorkingHours(c.date)
-    ).length;
-    const weekendCommits = repoCommits.filter((c) =>
-      DateUtils.isWeekend(c.date)
-    ).length;
-
-    const workingHoursPercent = Math.round(
-      (workingHoursCommits / repoCommits.length) * 100
-    );
-    const weekendPercent = Math.round(
-      (weekendCommits / repoCommits.length) * 100
-    );
-
     log.output(
-      `  Working Hours (9-18): ${workingHoursCommits} commits (${workingHoursPercent}%)`,
+      `  📊 Total Activity: ${timePatterns.totalCommits} commits analyzed`,
       "repo-detail"
     );
     log.output(
-      `  Weekend Work: ${weekendCommits} commits (${weekendPercent}%)`,
+      `  🏢 Working Hours (9AM-6PM): ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
       "repo-detail"
     );
     log.output(
-      `  After Hours: ${repoCommits.length - workingHoursCommits} commits (${100 - workingHoursPercent}%)`,
+      `  📅 Weekend Work: ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
       "repo-detail"
     );
+
+    if (timePatterns.peakHour.commits > 0) {
+      log.output(
+        `  🎯 Peak Hour: ${timePatterns.peakHour.label} (${timePatterns.peakHour.commits} commits)`,
+        "repo-detail"
+      );
+    }
+
+    if (timePatterns.earlyBird.commits > 0) {
+      log.output(
+        `  🌅 Early Bird: ${timePatterns.earlyBird.commits} commits (${timePatterns.earlyBird.percentage}%)`,
+        "repo-detail"
+      );
+    }
+
+    if (timePatterns.nightOwl.commits > 0) {
+      log.output(
+        `  🦉 Night Owl: ${timePatterns.nightOwl.commits} commits (${timePatterns.nightOwl.percentage}%)`,
+        "repo-detail"
+      );
+    }
+
+    // Show time periods breakdown if verbose
+    if (verbose && timePatterns.timePeriods.length > 0) {
+      log.output("", "repo-detail");
+      log.output("📋 Activity by Time Period:", "repo-detail");
+      for (const period of timePatterns.timePeriods) {
+        if (period.commits > 0) {
+          const workingIndicator = period.isWorkingTime ? "🏢" : "🏠";
+          log.output(
+            `  ${workingIndicator} ${period.name} (${period.timeRange}): ${period.commits} commits (${period.percentage}%)`,
+            "repo-detail"
+          );
+        }
+      }
+    }
+
     log.output("", "repo-detail");
   }
 }

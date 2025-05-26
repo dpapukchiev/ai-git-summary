@@ -1,5 +1,6 @@
 import { DateUtils } from "../utils/date-utils";
 import { log } from "../utils/logger";
+import { TimePatternCalculator } from "./calculators";
 
 /**
  * Helper function to find most productive day
@@ -90,34 +91,109 @@ export function printMarkdownSummary(summary: any) {
     "markdown-formatter"
   );
 
-  // Time patterns
+  // Time patterns with enhanced analysis
   if (summary.commits && summary.commits.length > 0) {
-    const workingHoursCommits = summary.commits.filter((c: any) =>
-      DateUtils.isWorkingHours(c.date)
-    ).length;
-    const weekendCommits = summary.commits.filter((c: any) =>
-      DateUtils.isWeekend(c.date)
-    ).length;
-    const workingHoursPercent = Math.round(
-      (workingHoursCommits / summary.commits.length) * 100
-    );
-    const weekendPercent = Math.round(
-      (weekendCommits / summary.commits.length) * 100
-    );
+    const timePatterns = TimePatternCalculator.calculate(summary.commits);
 
     log.output("## ⏰ Time Patterns\n", "markdown-formatter");
+
+    // Overview
     log.output(
-      `- **Working Hours (9-18):** ${workingHoursCommits} commits (${workingHoursPercent}%)`,
+      `- **📊 Total Activity:** ${timePatterns.totalCommits} commits analyzed`,
       "markdown-formatter"
     );
     log.output(
-      `- **Weekend Commits:** ${weekendCommits} commits (${weekendPercent}%)`,
+      `- **🏢 Working Hours (9AM-6PM):** ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
       "markdown-formatter"
     );
     log.output(
-      `- **After Hours:** ${summary.commits.length - workingHoursCommits} commits (${100 - workingHoursPercent}%)\n`,
+      `- **📅 Weekend Activity:** ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
       "markdown-formatter"
     );
+
+    // Peak activity and patterns
+    if (timePatterns.peakHour.commits > 0) {
+      log.output(
+        `- **🎯 Peak Hour:** ${timePatterns.peakHour.label} (${timePatterns.peakHour.commits} commits)`,
+        "markdown-formatter"
+      );
+    }
+
+    if (timePatterns.earlyBird.commits > 0) {
+      log.output(
+        `- **🌅 Early Bird:** ${timePatterns.earlyBird.commits} commits (${timePatterns.earlyBird.percentage}%) between 6-9AM`,
+        "markdown-formatter"
+      );
+    }
+
+    if (timePatterns.nightOwl.commits > 0) {
+      log.output(
+        `- **🦉 Night Owl:** ${timePatterns.nightOwl.commits} commits (${timePatterns.nightOwl.percentage}%) between 9PM-2AM`,
+        "markdown-formatter"
+      );
+    }
+
+    log.output("", "markdown-formatter");
+
+    // Time periods table
+    if (timePatterns.timePeriods.length > 0) {
+      log.output("### 📋 Activity by Time Period\n", "markdown-formatter");
+      log.output(
+        "| Period | Time Range | Commits | Percentage | Type |\n|--------|------------|---------|------------|------|",
+        "markdown-formatter"
+      );
+
+      for (const period of timePatterns.timePeriods) {
+        if (period.commits > 0) {
+          const typeIcon = period.isWorkingTime ? "🏢 Work" : "🏠 Personal";
+          const barLength = Math.max(1, Math.round(period.percentage / 2));
+          const bar = "▓".repeat(barLength);
+
+          log.output(
+            `| ${period.name} | ${period.timeRange} | ${period.commits} | ${period.percentage}% ${bar} | ${typeIcon} |`,
+            "markdown-formatter"
+          );
+        }
+      }
+      log.output("", "markdown-formatter");
+    }
+
+    // Hourly heatmap (condensed for markdown)
+    const activeHours = timePatterns.hourlyPattern.filter((h) => h.commits > 0);
+    if (activeHours.length > 0) {
+      log.output("### ⏰ Hourly Activity Heatmap\n", "markdown-formatter");
+      log.output("```", "markdown-formatter");
+
+      // Group hours into time blocks for better readability
+      const timeBlocks = [
+        { name: "Night   ", hours: [0, 1, 2, 3, 4, 5] },
+        { name: "Morning ", hours: [6, 7, 8, 9, 10, 11] },
+        { name: "Noon    ", hours: [12, 13, 14, 15, 16, 17] },
+        { name: "Evening ", hours: [18, 19, 20, 21, 22, 23] },
+      ];
+
+      for (const block of timeBlocks) {
+        const blockHours = block.hours.map((h) =>
+          timePatterns.hourlyPattern.find((p) => p.hour === h)
+        );
+
+        if (blockHours.some((h) => h && h.commits > 0)) {
+          const hourLabels = block.hours
+            .map((h) => DateUtils.formatHourLabel(h).padStart(4))
+            .join("");
+          const commitCounts = blockHours
+            .map((h) =>
+              h && h.commits > 0 ? h.commits.toString().padStart(4) : "   ·"
+            )
+            .join("");
+
+          log.output(`${block.name}│${hourLabels}`, "markdown-formatter");
+          log.output(`        │${commitCounts}`, "markdown-formatter");
+        }
+      }
+
+      log.output("```\n", "markdown-formatter");
+    }
   }
 
   // Commit size analysis

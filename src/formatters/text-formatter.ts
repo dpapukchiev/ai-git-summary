@@ -83,22 +83,100 @@ class SummaryFormatter {
 
   static formatTimePatterns(
     timePatterns: TimePatterns,
-    totalCommits: number
+    totalCommits: number,
+    verbose = false
   ): void {
     log.output("⏰ Time Patterns:", this.CONTEXT);
+
+    // Overview with enhanced insights
     log.output(
-      `  Working Hours (9-18): ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
+      `  📊 Total Activity: ${timePatterns.totalCommits} commits analyzed`,
       this.CONTEXT
     );
+
     log.output(
-      `  Weekend Commits: ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
+      `  🏢 Working Hours (9AM-6PM): ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
       this.CONTEXT
     );
-    const afterHoursCommits = totalCommits - timePatterns.workingHoursCommits;
+
     log.output(
-      `  After Hours: ${afterHoursCommits} commits (${100 - timePatterns.workingHoursPercent}%)\n`,
+      `  📅 Weekend Activity: ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
       this.CONTEXT
     );
+
+    // Peak activity insights
+    if (timePatterns.peakHour.commits > 0) {
+      log.output(
+        `  🎯 Peak Hour: ${timePatterns.peakHour.label} (${timePatterns.peakHour.commits} commits)`,
+        this.CONTEXT
+      );
+    }
+
+    // Working patterns insights
+    if (timePatterns.earlyBird.commits > 0) {
+      log.output(
+        `  🌅 Early Bird: ${timePatterns.earlyBird.commits} commits (${timePatterns.earlyBird.percentage}%) between 6-9AM`,
+        this.CONTEXT
+      );
+    }
+
+    if (timePatterns.nightOwl.commits > 0) {
+      log.output(
+        `  🦉 Night Owl: ${timePatterns.nightOwl.commits} commits (${timePatterns.nightOwl.percentage}%) between 9PM-2AM`,
+        this.CONTEXT
+      );
+    }
+
+    log.output("", this.CONTEXT);
+
+    // Time periods breakdown
+    if (timePatterns.timePeriods.length > 0) {
+      log.output("📋 Activity by Time Period:", this.CONTEXT);
+      for (const period of timePatterns.timePeriods) {
+        if (period.commits > 0) {
+          const workingIndicator = period.isWorkingTime ? "🏢" : "🏠";
+          const barLength = Math.max(1, Math.round(period.percentage / 3));
+          const bar =
+            "▓".repeat(barLength) + "░".repeat(Math.max(0, 33 - barLength));
+
+          log.output(
+            `  ${workingIndicator} ${period.name.padEnd(13)} ${period.timeRange.padEnd(9)} │${bar}│ ${period.commits.toString().padStart(3)} commits (${period.percentage.toString().padStart(2)}%)`,
+            this.CONTEXT
+          );
+        }
+      }
+      log.output("", this.CONTEXT);
+    }
+
+    // Detailed hourly breakdown (only in verbose mode)
+    if (verbose && timePatterns.hourlyPattern.length > 0) {
+      log.output("⏰ Hourly Activity Pattern:", this.CONTEXT);
+      log.output(
+        "   Hour  │Activity Distribution      │Commits│",
+        this.CONTEXT
+      );
+      log.output(
+        "   ─────┼────────────────────────────┼───────┤",
+        this.CONTEXT
+      );
+
+      for (const hour of timePatterns.hourlyPattern) {
+        if (hour.commits > 0) {
+          const workingHour = hour.hour >= 9 && hour.hour < 18 ? "🏢" : "🏠";
+          log.output(
+            `   ${hour.label.padEnd(4)} │${hour.bar}│${hour.commits.toString().padStart(6)} │ ${workingHour}`,
+            this.CONTEXT
+          );
+        }
+      }
+      log.output("", this.CONTEXT);
+    } else if (timePatterns.hourlyPattern.length > 0) {
+      log.output(
+        "💡 Use --verbose to see detailed hourly breakdown",
+        this.CONTEXT
+      );
+      log.output("", this.CONTEXT);
+    }
   }
 
   static formatCommitSizes(metrics: CommitSizeMetrics): void {
@@ -333,7 +411,11 @@ export function printTextSummary(summary: any, verbose = false): void {
 
   if (summary.commits && summary.commits.length > 0) {
     const timePatterns = TimePatternCalculator.calculate(summary.commits);
-    SummaryFormatter.formatTimePatterns(timePatterns, summary.commits.length);
+    SummaryFormatter.formatTimePatterns(
+      timePatterns,
+      summary.commits.length,
+      verbose
+    );
 
     const commitMetrics = CommitSizeCalculator.calculate(summary.commits);
     SummaryFormatter.formatCommitSizes(commitMetrics);

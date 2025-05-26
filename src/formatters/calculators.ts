@@ -80,7 +80,7 @@ export class CommitSizeCalculator {
 }
 
 /**
- * Calculator for time-based patterns
+ * Calculator for time-based patterns with enhanced granular analysis
  */
 export class TimePatternCalculator {
   static calculate(commits: any[]): TimePatterns {
@@ -90,9 +90,18 @@ export class TimePatternCalculator {
         weekendCommits: 0,
         workingHoursPercent: 0,
         weekendPercent: 0,
+        hourlyPattern: [],
+        timePeriods: [],
+        peakHour: { hour: 0, commits: 0, label: "N/A" },
+        earlyBird: { commits: 0, percentage: 0 },
+        nightOwl: { commits: 0, percentage: 0 },
+        totalCommits: 0,
       };
     }
 
+    const totalCommits = commits.length;
+
+    // Legacy calculations for backward compatibility
     const workingHoursCommits = commits.filter((c: any) =>
       DateUtils.isWorkingHours(c.date)
     ).length;
@@ -101,13 +110,121 @@ export class TimePatternCalculator {
       DateUtils.isWeekend(c.date)
     ).length;
 
-    const total = commits.length;
+    // Enhanced hourly pattern analysis
+    const hourlyCommitMap = DateUtils.getHourlyCommitPattern(commits);
+    const maxHourlyCommits = Math.max(...hourlyCommitMap.values());
+
+    const hourlyPattern = Array.from(hourlyCommitMap.entries()).map(
+      ([hour, commits]) => {
+        const percentage =
+          totalCommits > 0 ? Math.round((commits / totalCommits) * 100) : 0;
+        const barPercentage =
+          maxHourlyCommits > 0
+            ? Math.round((commits / maxHourlyCommits) * 100)
+            : 0;
+        const barLength = Math.max(1, Math.round(barPercentage / 5)); // Scale to reasonable length
+        const bar =
+          "▓".repeat(barLength) + "░".repeat(Math.max(0, 20 - barLength));
+
+        return {
+          hour,
+          commits,
+          percentage,
+          bar,
+          label: DateUtils.formatHourLabel(hour),
+        };
+      }
+    );
+
+    // Find peak hour
+    const peakHour = Array.from(hourlyCommitMap.entries()).reduce(
+      (peak, [hour, commits]) =>
+        commits > peak.commits
+          ? { hour, commits, label: DateUtils.formatHourLabel(hour) }
+          : peak,
+      { hour: 0, commits: 0, label: "N/A" }
+    );
+
+    // Time period analysis
+    const timePeriods = this.calculateTimePeriods(commits, totalCommits);
+
+    // Early bird and night owl analysis
+    const earlyBirdCommits = commits.filter((c: any) =>
+      DateUtils.isEarlyBird(c.date)
+    ).length;
+    const nightOwlCommits = commits.filter((c: any) =>
+      DateUtils.isNightOwl(c.date)
+    ).length;
+
     return {
+      // Legacy fields
       workingHoursCommits,
       weekendCommits,
-      workingHoursPercent: Math.round((workingHoursCommits / total) * 100),
-      weekendPercent: Math.round((weekendCommits / total) * 100),
+      workingHoursPercent: Math.round(
+        (workingHoursCommits / totalCommits) * 100
+      ),
+      weekendPercent: Math.round((weekendCommits / totalCommits) * 100),
+
+      // Enhanced fields
+      hourlyPattern,
+      timePeriods,
+      peakHour,
+      earlyBird: {
+        commits: earlyBirdCommits,
+        percentage: Math.round((earlyBirdCommits / totalCommits) * 100),
+      },
+      nightOwl: {
+        commits: nightOwlCommits,
+        percentage: Math.round((nightOwlCommits / totalCommits) * 100),
+      },
+      totalCommits,
     };
+  }
+
+  private static calculateTimePeriods(commits: any[], totalCommits: number) {
+    const periodMap = new Map<
+      string,
+      { commits: number; range: string; isWorking: boolean }
+    >();
+
+    // Initialize periods
+    const periods = [
+      { name: "Early Morning", range: "6AM-9AM", isWorking: false },
+      { name: "Morning", range: "9AM-12PM", isWorking: true },
+      { name: "Lunch Time", range: "12PM-2PM", isWorking: true },
+      { name: "Afternoon", range: "2PM-6PM", isWorking: true },
+      { name: "Evening", range: "6PM-9PM", isWorking: false },
+      { name: "Night", range: "9PM-2AM", isWorking: false },
+      { name: "Late Night", range: "2AM-6AM", isWorking: false },
+    ];
+
+    periods.forEach((period) => {
+      periodMap.set(period.name, {
+        commits: 0,
+        range: period.range,
+        isWorking: period.isWorking,
+      });
+    });
+
+    // Count commits by period
+    commits.forEach((commit: any) => {
+      const hour = commit.date.getHours();
+      const periodName = DateUtils.getTimePeriodName(hour);
+      const period = periodMap.get(periodName);
+      if (period) {
+        period.commits++;
+      }
+    });
+
+    // Convert to array with percentages
+    return Array.from(periodMap.entries()).map(([name, data]) => ({
+      name,
+      timeRange: data.range,
+      commits: data.commits,
+      percentage:
+        totalCommits > 0 ? Math.round((data.commits / totalCommits) * 100) : 0,
+      isWorkingTime: data.isWorking,
+    }));
   }
 }
 

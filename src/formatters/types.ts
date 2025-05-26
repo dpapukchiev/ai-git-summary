@@ -9,11 +9,36 @@ export interface CommitSizeMetrics {
   largePercentage: number;
 }
 
+export interface HourlyPattern {
+  hour: number;
+  commits: number;
+  percentage: number;
+  bar: string;
+  label: string;
+}
+
+export interface TimePeriodStats {
+  name: string;
+  timeRange: string;
+  commits: number;
+  percentage: number;
+  isWorkingTime: boolean;
+}
+
 export interface TimePatterns {
+  // Legacy fields for backward compatibility
   workingHoursCommits: number;
   weekendCommits: number;
   workingHoursPercent: number;
   weekendPercent: number;
+
+  // Enhanced time visibility
+  hourlyPattern: HourlyPattern[];
+  timePeriods: TimePeriodStats[];
+  peakHour: { hour: number; commits: number; label: string };
+  earlyBird: { commits: number; percentage: number }; // 6-9 AM
+  nightOwl: { commits: number; percentage: number }; // 9 PM - 2 AM
+  totalCommits: number;
 }
 
 export interface ActivityMetrics {
