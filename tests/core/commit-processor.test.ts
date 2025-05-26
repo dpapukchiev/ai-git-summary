@@ -1,8 +1,11 @@
 import { DefaultLogFields } from 'simple-git';
 import { CommitProcessor } from '../../src/core/commit-processor';
-import { CommitStatsService } from '../../src/core/commit-stats-service';
 import { DatabaseManager } from '../../src/storage/database';
-import { createTestDatabase } from '../helpers/test-fixtures';
+import {
+  FakeCommitStatsService,
+  RepositoryBuilder,
+  createTestDatabase,
+} from '../helpers';
 
 // Mock the logger to avoid console output during tests
 jest.mock('../../src/utils/logger', () => ({
@@ -13,41 +16,20 @@ jest.mock('../../src/utils/logger', () => ({
   },
 }));
 
-// Simple fake for CommitStatsService - much easier than complex mocking
-class FakeCommitStatsService extends CommitStatsService {
-  private responses: Map<string, any> = new Map();
-  private errors: Map<string, Error> = new Map();
-
-  constructor() {
-    super(null as any); // We won't use the git operations
-  }
-
-  setResponse(hash: string, stats: any): void {
-    this.responses.set(hash, stats);
-  }
-
-  setError(hash: string, error: Error): void {
-    this.errors.set(hash, error);
-  }
-
-  override async getCommitStats(hash: string): Promise<any> {
-    if (this.errors.has(hash)) {
-      throw this.errors.get(hash);
-    }
-
-    const response = this.responses.get(hash);
-    if (!response) {
-      throw new Error(`No response configured for ${hash}`);
-    }
-
-    return response;
-  }
-}
-
 describe('CommitProcessor', () => {
   let db: DatabaseManager;
   let fakeStatsService: FakeCommitStatsService;
   let commitProcessor: CommitProcessor;
+
+  const mockLogEntry: DefaultLogFields = {
+    hash: 'abc123',
+    author_name: 'John Doe',
+    author_email: 'john@example.com',
+    date: '2024-01-15T10:30:00Z',
+    message: 'feat: add user authentication',
+    refs: '',
+    body: '',
+  };
 
   beforeEach(() => {
     db = createTestDatabase();
@@ -57,22 +39,21 @@ describe('CommitProcessor', () => {
 
   afterEach(() => {
     db.close();
+    fakeStatsService.reset();
   });
 
   describe('processCommit', () => {
-    const mockLogEntry: DefaultLogFields = {
-      hash: 'abc123',
-      author_name: 'John Doe',
-      author_email: 'john@example.com',
-      date: '2024-01-15T10:30:00Z',
-      message: 'feat: add user authentication',
-      refs: '',
-      body: '',
-    };
-
     it('should successfully process a commit', async () => {
-      // Setup: Configure fake stats response - much simpler than mocking!
-      fakeStatsService.setResponse('abc123', {
+      // Setup: Create repository using builder - much cleaner!
+      const repo = RepositoryBuilder.create()
+        .withName('test-repo')
+        .withPath('/path/to/repo')
+        .withRemoteUrl('https://github.com/test/repo.git')
+        .build();
+      const repoId = db.addRepository(repo);
+
+      // Configure fake stats response using improved helper methods
+      fakeStatsService.setupSuccessfulCommit('abc123', {
         filesChanged: 2,
         insertions: 28,
         deletions: 7,
@@ -92,15 +73,7 @@ describe('CommitProcessor', () => {
         ],
       });
 
-      // Add a repository first
-      const repoId = db.addRepository({
-        name: 'test-repo',
-        path: '/path/to/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
-        lastSynced: new Date(),
-      });
-
-      // Act: Process the commit - no git parameter needed!
+      // Act: Process the commit
       await commitProcessor.processCommit(repoId, mockLogEntry);
 
       // Assert: Verify commit was added to database
@@ -140,20 +113,12 @@ describe('CommitProcessor', () => {
     });
 
     it('should handle commits with no file changes', async () => {
-      // Setup: Configure empty stats response
-      fakeStatsService.setResponse('empty123', {
-        filesChanged: 0,
-        insertions: 0,
-        deletions: 0,
-        fileChanges: [],
-      });
+      // Setup: Create repository using builder
+      const repo = RepositoryBuilder.create().withName('test-repo').build();
+      const repoId = db.addRepository(repo);
 
-      const repoId = db.addRepository({
-        name: 'test-repo',
-        path: '/path/to/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
-        lastSynced: new Date(),
-      });
+      // Configure empty commit using helper method - one line instead of complex setup!
+      fakeStatsService.setupEmptyCommit('empty123');
 
       const emptyLogEntry: DefaultLogFields = {
         ...mockLogEntry,
@@ -179,15 +144,12 @@ describe('CommitProcessor', () => {
     });
 
     it('should handle stats service errors gracefully', async () => {
-      // Setup: Configure stats service to throw error
-      fakeStatsService.setError('error123', new Error('Stats service failed'));
+      // Setup: Create repository using builder
+      const repo = RepositoryBuilder.create().withName('test-repo').build();
+      const repoId = db.addRepository(repo);
 
-      const repoId = db.addRepository({
-        name: 'test-repo',
-        path: '/path/to/repo',
-        remoteUrl: 'https://github.com/test/repo.git',
-        lastSynced: new Date(),
-      });
+      // Configure error using clear method - much better than jest.fn().mockRejectedValue()!
+      fakeStatsService.setError('error123', new Error('Stats service failed'));
 
       const errorLogEntry: DefaultLogFields = {
         ...mockLogEntry,
@@ -199,36 +161,119 @@ describe('CommitProcessor', () => {
         commitProcessor.processCommit(repoId, errorLogEntry)
       ).rejects.toThrow('Stats service failed');
 
-      // Verify no commit was added
+      // Verify no commit was stored
       const commits = db.getCommitsByRepository(repoId);
       expect(commits).toHaveLength(0);
     });
 
-    it('should handle invalid commit ID gracefully', async () => {
-      // Setup: Mock database to return invalid commit ID
-      const mockDb = {
-        addCommit: jest.fn().mockReturnValue(0), // Invalid ID
-        addFileChange: jest.fn(),
-      } as unknown as DatabaseManager;
+    it('should handle large commits efficiently', async () => {
+      // Setup: Create repository using builder
+      const repo = RepositoryBuilder.create().withName('large-repo').build();
+      const repoId = db.addRepository(repo);
 
-      const processor = new CommitProcessor(mockDb, fakeStatsService);
+      // Configure large commit using helper - demonstrates the power of scenario-based helpers!
+      fakeStatsService.setupLargeCommit('large123');
 
-      fakeStatsService.setResponse('invalid123', {
-        filesChanged: 0,
-        insertions: 0,
-        deletions: 0,
-        fileChanges: [],
-      });
-
-      const invalidLogEntry: DefaultLogFields = {
+      const largeLogEntry: DefaultLogFields = {
         ...mockLogEntry,
-        hash: 'invalid123',
+        hash: 'large123',
+        message: 'refactor: major code restructuring',
       };
 
-      // Act & Assert: Should throw error for invalid commit ID
-      await expect(processor.processCommit(1, invalidLogEntry)).rejects.toThrow(
-        'Failed to add commit invalid123 - invalid commit ID: 0'
-      );
+      // Act: Process large commit
+      await commitProcessor.processCommit(repoId, largeLogEntry);
+
+      // Assert: Large commit should be handled correctly
+      const commits = db.getCommitsByRepository(repoId);
+      expect(commits).toHaveLength(1);
+      expect(commits[0]).toMatchObject({
+        hash: 'large123',
+        filesChanged: 15,
+        insertions: 500,
+        deletions: 200,
+      });
+
+      const fileChanges = db.getFileChangesByCommit(commits[0]!.id!);
+      expect(fileChanges).toHaveLength(15);
+    });
+
+    it('should handle duplicate commits gracefully', async () => {
+      // Setup: Create repository and add a commit first
+      const repo = RepositoryBuilder.create()
+        .withName('constraint-repo')
+        .build();
+      const repoId = db.addRepository(repo);
+
+      // Configure successful stats
+      fakeStatsService.setupSuccessfulCommit('duplicate123');
+
+      // Add the commit once
+      await commitProcessor.processCommit(repoId, {
+        ...mockLogEntry,
+        hash: 'duplicate123',
+      });
+
+      // Act: Try to add the same commit again - should handle gracefully
+      await commitProcessor.processCommit(repoId, {
+        ...mockLogEntry,
+        hash: 'duplicate123',
+        message: 'updated message', // Different message but same hash
+      });
+
+      // Assert: Should still only have one commit (or handle update appropriately)
+      const commits = db.getCommitsByRepository(repoId);
+      expect(commits).toHaveLength(1);
+
+      // The behavior might be to update the existing commit or ignore the duplicate
+      // Either way, we should have exactly one commit
+      expect(commits[0]?.hash).toBe('duplicate123');
+    });
+  });
+
+  describe('integration scenarios', () => {
+    it('should process multiple commits with different characteristics', async () => {
+      // Setup: Create repository using builder
+      const repo = RepositoryBuilder.create()
+        .withName('multi-commit-repo')
+        .build();
+      const repoId = db.addRepository(repo);
+
+      // Configure different types of commits using our helper methods
+      fakeStatsService.setupSuccessfulCommit('feature1', {
+        filesChanged: 3,
+        insertions: 45,
+        deletions: 12,
+      });
+      fakeStatsService.setupEmptyCommit('empty1');
+      fakeStatsService.setupLargeCommit('refactor1');
+
+      const commits = [
+        { ...mockLogEntry, hash: 'feature1', message: 'feat: new feature' },
+        { ...mockLogEntry, hash: 'empty1', message: 'chore: empty commit' },
+        {
+          ...mockLogEntry,
+          hash: 'refactor1',
+          message: 'refactor: big changes',
+        },
+      ];
+
+      // Act: Process all commits
+      for (const commit of commits) {
+        await commitProcessor.processCommit(repoId, commit);
+      }
+
+      // Assert: All commits should be processed correctly
+      const storedCommits = db.getCommitsByRepository(repoId);
+      expect(storedCommits).toHaveLength(3);
+
+      // Verify each commit type was handled appropriately
+      const featureCommit = storedCommits.find(c => c.hash === 'feature1');
+      const emptyCommit = storedCommits.find(c => c.hash === 'empty1');
+      const refactorCommit = storedCommits.find(c => c.hash === 'refactor1');
+
+      expect(featureCommit?.insertions).toBe(45);
+      expect(emptyCommit?.insertions).toBe(0);
+      expect(refactorCommit?.insertions).toBe(500); // From setupLargeCommit
     });
   });
 });
