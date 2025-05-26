@@ -1,9 +1,9 @@
-import { GitAnalyzer } from "../../../core/git-analyzer";
-import { processInParallel } from "../../../utils/parallel-processor";
-import { parseGitRemoteUrl } from "../../../utils/git-utils";
-import { log } from "../../../utils/logger";
-import * as fs from "fs";
-import * as path from "path";
+import { GitAnalyzer } from '../../../core/git-analyzer';
+import { processInParallel } from '../../../utils/parallel-processor';
+import { parseGitRemoteUrl } from '../../../utils/git-utils';
+import { log } from '../../../utils/logger';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface AddOrgOptions {
   maxDepth: string;
@@ -17,14 +17,14 @@ export class AddOrgHandler {
   async execute(
     organizationName: string,
     searchPaths: string[],
-    options: AddOrgOptions,
+    options: AddOrgOptions
   ): Promise<void> {
     log.output(
       `🔍 Discovering repositories from organization "${organizationName}"...`,
-      "add-org",
+      'add-org'
     );
 
-    const absolutePaths = searchPaths.map((p) => path.resolve(p));
+    const absolutePaths = searchPaths.map(p => path.resolve(p));
     const maxDepth = parseInt(options.maxDepth, 10);
 
     // Validate search paths
@@ -38,40 +38,40 @@ export class AddOrgHandler {
       await this.gitAnalyzer.discoverRepositoriesByOrganization(
         absolutePaths,
         organizationName,
-        maxDepth,
+        maxDepth
       );
 
     if (repositories.length === 0) {
       log.output(
         `No repositories found for organization "${organizationName}" in the specified paths.`,
-        "add-org",
+        'add-org'
       );
       return;
     }
 
     log.output(
       `\nFound ${repositories.length} repositories from "${organizationName}":`,
-      "add-org",
+      'add-org'
     );
     for (const repo of repositories) {
       const remoteInfo = repo.remoteUrl
         ? parseGitRemoteUrl(repo.remoteUrl)
         : null;
-      const provider = remoteInfo ? remoteInfo.provider : "unknown";
-      log.output(`  📁 ${repo.name} (${provider}) - ${repo.path}`, "add-org");
+      const provider = remoteInfo ? remoteInfo.provider : 'unknown';
+      log.output(`  📁 ${repo.name} (${provider}) - ${repo.path}`, 'add-org');
       if (repo.remoteUrl) {
-        log.output(`     Remote: ${repo.remoteUrl}`, "add-org");
+        log.output(`     Remote: ${repo.remoteUrl}`, 'add-org');
       }
     }
 
     if (options.dryRun) {
       log.output(
         `\n🔍 Dry run completed. Would add ${repositories.length} repositories.`,
-        "add-org",
+        'add-org'
       );
       log.output(
-        "Run without --dry-run to actually add these repositories.",
-        "add-org",
+        'Run without --dry-run to actually add these repositories.',
+        'add-org'
       );
       return;
     }
@@ -79,12 +79,12 @@ export class AddOrgHandler {
     const concurrency = parseInt(options.concurrency, 10);
     log.output(
       `\nAdding and analyzing repositories with concurrency: ${concurrency}...`,
-      "add-org",
+      'add-org'
     );
 
     const results = await processInParallel(
       repositories,
-      async (repo) => {
+      async repo => {
         try {
           await this.gitAnalyzer.analyzeRepository(repo.path, repo.name);
           return { success: true };
@@ -94,18 +94,18 @@ export class AddOrgHandler {
       },
       concurrency,
       (completed, total, repo, success) => {
-        const status = success ? "✅" : "❌";
-        log.output(`${status} [${completed}/${total}] ${repo.name}`, "add-org");
-      },
+        const status = success ? '✅' : '❌';
+        log.output(`${status} [${completed}/${total}] ${repo.name}`, 'add-org');
+      }
     );
 
-    log.output(`\n🎉 Organization repository discovery complete!`, "add-org");
-    log.output(`✅ Successfully added: ${results.completed}`, "add-org");
+    log.output(`\n🎉 Organization repository discovery complete!`, 'add-org');
+    log.output(`✅ Successfully added: ${results.completed}`, 'add-org');
     if (results.failed > 0) {
-      log.output(`❌ Failed: ${results.failed}`, "add-org");
-      log.output("\nFailed repositories:", "add-org");
+      log.output(`❌ Failed: ${results.failed}`, 'add-org');
+      log.output('\nFailed repositories:', 'add-org');
       for (const { item, error } of results.errors) {
-        log.output(`  - ${item.name}: ${error}`, "add-org");
+        log.output(`  - ${item.name}: ${error}`, 'add-org');
       }
     }
   }

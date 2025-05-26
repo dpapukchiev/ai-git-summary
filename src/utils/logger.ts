@@ -1,9 +1,9 @@
-import winston from "winston";
-import chalk from "chalk";
+import winston from 'winston';
+import chalk from 'chalk';
 
 // Custom format for console output with colors and emojis
 const consoleFormat = winston.format.combine(
-  winston.format.timestamp({ format: "HH:mm:ss" }),
+  winston.format.timestamp({ format: 'HH:mm:ss' }),
   winston.format.errors({ stack: true }),
   winston.format.printf(
     ({ level, message, timestamp, stack, context }): string => {
@@ -31,42 +31,42 @@ const consoleFormat = winston.format.combine(
       }
 
       return logMessage;
-    },
-  ),
+    }
+  )
 );
 
 // Create winston logger instance
 const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || "info",
+  level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
-    winston.format.json(),
+    winston.format.json()
   ),
-  defaultMeta: { service: "ai-git-summary" },
+  defaultMeta: { service: 'ai-git-summary' },
   transports: [
     // Console transport with custom formatting
     new winston.transports.Console({
       format: consoleFormat,
-      level: process.env.NODE_ENV === "production" ? "info" : "debug",
+      level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
     }),
 
     // File transport for errors
     new winston.transports.File({
-      filename: "logs/error.log",
-      level: "error",
+      filename: 'logs/error.log',
+      level: 'error',
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json(),
+        winston.format.json()
       ),
     }),
 
     // File transport for all logs
     new winston.transports.File({
-      filename: "logs/combined.log",
+      filename: 'logs/combined.log',
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json(),
+        winston.format.json()
       ),
     }),
   ],

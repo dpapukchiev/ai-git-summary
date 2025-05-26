@@ -1,4 +1,4 @@
-import PQueue from "p-queue";
+import PQueue from 'p-queue';
 
 /**
  * Utility for processing items in parallel with configurable concurrency using p-queue
@@ -18,7 +18,7 @@ export type ProgressCallback<T> = (
   completed: number,
   total: number,
   item: T,
-  success: boolean,
+  success: boolean
 ) => void;
 
 export interface ParallelProcessingOptions {
@@ -34,13 +34,13 @@ export async function processInParallel<T>(
   items: T[],
   processor: (item: T) => Promise<ProcessResult>,
   concurrency: number = 3,
-  progressCallback?: ProgressCallback<T>,
+  progressCallback?: ProgressCallback<T>
 ): Promise<ParallelProcessingResult<T>> {
   return processInParallelWithOptions(
     items,
     processor,
     { concurrency },
-    progressCallback,
+    progressCallback
   );
 }
 
@@ -51,7 +51,7 @@ async function processInParallelWithOptions<T>(
   items: T[],
   processor: (item: T) => Promise<ProcessResult>,
   options: ParallelProcessingOptions = {},
-  progressCallback?: ProgressCallback<T>,
+  progressCallback?: ProgressCallback<T>
 ): Promise<ParallelProcessingResult<T>> {
   const {
     concurrency = 3,
@@ -72,7 +72,7 @@ async function processInParallelWithOptions<T>(
   };
 
   // Create tasks for all items
-  const tasks = items.map((item) =>
+  const tasks = items.map(item =>
     queue.add(async () => {
       try {
         const result = await processor(item);
@@ -82,7 +82,7 @@ async function processInParallelWithOptions<T>(
             results.completed + results.failed,
             items.length,
             item,
-            true,
+            true
           );
         } else {
           results.failed++;
@@ -91,7 +91,7 @@ async function processInParallelWithOptions<T>(
             results.completed + results.failed,
             items.length,
             item,
-            false,
+            false
           );
         }
       } catch (error) {
@@ -101,10 +101,10 @@ async function processInParallelWithOptions<T>(
           results.completed + results.failed,
           items.length,
           item,
-          false,
+          false
         );
       }
-    }),
+    })
   );
 
   // Wait for all tasks to complete

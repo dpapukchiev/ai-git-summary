@@ -1,7 +1,7 @@
-import { SimpleGit } from "simple-git";
-import { FileChange } from "../types";
-import { log } from "../utils/logger";
-import { DatabaseManager } from "../storage/database";
+import { SimpleGit } from 'simple-git';
+import { FileChange } from '../types';
+import { log } from '../utils/logger';
+import { DatabaseManager } from '../storage/database';
 
 export class CommitProcessor {
   constructor(private db: DatabaseManager) {}
@@ -9,7 +9,7 @@ export class CommitProcessor {
   async processCommit(
     git: SimpleGit,
     repoId: number,
-    logEntry: any,
+    logEntry: any
   ): Promise<void> {
     try {
       const stats = await this.getCommitStats(git, logEntry.hash);
@@ -32,7 +32,7 @@ export class CommitProcessor {
       log.error(
         `Error processing commit ${logEntry.hash}`,
         error as Error,
-        "commit-processor",
+        'commit-processor'
       );
       throw error;
     }
@@ -41,15 +41,15 @@ export class CommitProcessor {
   private validateCommitId(commitId: number, hash: string): void {
     if (!commitId || commitId <= 0) {
       throw new Error(
-        `Failed to add commit ${hash} - invalid commit ID: ${commitId}`,
+        `Failed to add commit ${hash} - invalid commit ID: ${commitId}`
       );
     }
   }
 
   private async saveFileChanges(
     commitId: number,
-    fileChanges: Omit<FileChange, "id" | "commitId">[],
-    hash: string,
+    fileChanges: Omit<FileChange, 'id' | 'commitId'>[],
+    hash: string
   ): Promise<void> {
     for (const fileChange of fileChanges) {
       try {
@@ -61,7 +61,7 @@ export class CommitProcessor {
         log.error(
           `Error adding file change for commit ${hash}, file ${fileChange.filePath}`,
           fileChangeError as Error,
-          "commit-processor",
+          'commit-processor'
         );
       }
     }
@@ -69,12 +69,12 @@ export class CommitProcessor {
 
   async getCommitStats(
     git: SimpleGit,
-    hash: string,
+    hash: string
   ): Promise<{
     filesChanged: number;
     insertions: number;
     deletions: number;
-    fileChanges: Omit<FileChange, "id" | "commitId">[];
+    fileChanges: Omit<FileChange, 'id' | 'commitId'>[];
   }> {
     try {
       return await this.getRegularCommitStats(git, hash);
@@ -85,7 +85,7 @@ export class CommitProcessor {
 
   private async getRegularCommitStats(git: SimpleGit, hash: string) {
     const diffSummary = await git.diffSummary([`${hash}^`, hash]);
-    const diff = await git.diff([`${hash}^`, hash, "--numstat"]);
+    const diff = await git.diff([`${hash}^`, hash, '--numstat']);
     const fileChanges = this.parseDiffNumstat(diff);
 
     return {
@@ -98,9 +98,9 @@ export class CommitProcessor {
 
   private async getFirstCommitStats(git: SimpleGit, hash: string) {
     try {
-      const emptyTreeHash = "4b825dc642cb6eb9a060e54bf8d69288fbee4904";
+      const emptyTreeHash = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
       const diffSummary = await git.diffSummary([emptyTreeHash, hash]);
-      const diff = await git.diff([emptyTreeHash, hash, "--numstat"]);
+      const diff = await git.diff([emptyTreeHash, hash, '--numstat']);
       const fileChanges = this.parseDiffNumstat(diff);
 
       return {
@@ -110,7 +110,7 @@ export class CommitProcessor {
         fileChanges,
       };
     } catch (firstCommitError) {
-      log.warn(`Could not get stats for commit ${hash}`, "commit-processor");
+      log.warn(`Could not get stats for commit ${hash}`, 'commit-processor');
       return {
         filesChanged: 0,
         insertions: 0,
@@ -121,30 +121,30 @@ export class CommitProcessor {
   }
 
   private parseDiffNumstat(
-    diffOutput: string,
-  ): Omit<FileChange, "id" | "commitId">[] {
+    diffOutput: string
+  ): Omit<FileChange, 'id' | 'commitId'>[] {
     const lines = diffOutput
       .trim()
-      .split("\n")
-      .filter((line) => line.length > 0);
+      .split('\n')
+      .filter(line => line.length > 0);
 
     return lines
-      .map((line) => this.parseNumstatLine(line))
+      .map(line => this.parseNumstatLine(line))
       .filter(
-        (change): change is Omit<FileChange, "id" | "commitId"> =>
-          change !== null,
+        (change): change is Omit<FileChange, 'id' | 'commitId'> =>
+          change !== null
       );
   }
 
   private parseNumstatLine(
-    line: string,
-  ): Omit<FileChange, "id" | "commitId"> | null {
-    const parts = line.split("\t");
+    line: string
+  ): Omit<FileChange, 'id' | 'commitId'> | null {
+    const parts = line.split('\t');
     if (parts.length < 3) return null;
 
     const insertions =
-      parts[0] === "-" ? 0 : parseInt(parts[0] || "0", 10) || 0;
-    const deletions = parts[1] === "-" ? 0 : parseInt(parts[1] || "0", 10) || 0;
+      parts[0] === '-' ? 0 : parseInt(parts[0] || '0', 10) || 0;
+    const deletions = parts[1] === '-' ? 0 : parseInt(parts[1] || '0', 10) || 0;
     const filePath = parts[2];
 
     if (!filePath) return null;
@@ -160,11 +160,11 @@ export class CommitProcessor {
   private determineChangeType(
     insertions: number,
     deletions: number,
-    filePath: string,
-  ): FileChange["changeType"] {
-    if (filePath.includes(" => ")) return "renamed";
-    if (insertions > 0 && deletions === 0) return "added";
-    if (insertions === 0 && deletions > 0) return "deleted";
-    return "modified";
+    filePath: string
+  ): FileChange['changeType'] {
+    if (filePath.includes(' => ')) return 'renamed';
+    if (insertions > 0 && deletions === 0) return 'added';
+    if (insertions === 0 && deletions > 0) return 'deleted';
+    return 'modified';
   }
 }

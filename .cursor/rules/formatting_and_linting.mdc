@@ -1,0 +1,127 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Formatting and Linting Rules
+
+## Automatic Code Formatting and Linting
+
+When generating, editing, or creating new code, ALWAYS apply the following formatting and linting standards:
+
+### 1. **ESLint Compliance**
+
+- All generated TypeScript/JavaScript code MUST pass ESLint validation without errors
+- Follow the project's ESLint configuration (`.eslintrc.js`)
+- Apply ESLint auto-fixes where possible
+- Ensure no ESLint warnings are introduced unless absolutely necessary
+
+### 2. **Prettier Formatting**
+
+- All code MUST be formatted according to the Prettier configuration (`.prettierrc.js`)
+- Apply consistent indentation (2 spaces, no tabs)
+- Use single quotes for strings
+- Include trailing commas where appropriate
+- Maintain 80-character line length for code readability
+- Use semicolons consistently
+
+### 3. **TypeScript Standards**
+
+- Always use explicit type annotations for function parameters and return types
+- Prefer `interface` over `type` for object shapes
+- Use `type` for unions, primitives, and computed types
+- Import types using `import type` syntax when importing only types
+- Never use `any` type - use proper typing or `unknown` when necessary
+- Enable strict TypeScript checking
+
+### 4. **Import Organization**
+
+- Organize imports in the following order:
+  1. Node.js built-in modules
+  2. External dependencies
+  3. Internal modules
+  4. Parent directory imports
+  5. Sibling imports
+  6. Index imports
+- Add blank lines between import groups
+- Sort imports alphabetically within each group
+- Use type-only imports when importing only types
+
+### 5. **Code Quality Standards**
+
+- Use descriptive variable and function names
+- Prefer `const` over `let`, avoid `var`
+- Use arrow functions for callbacks and short functions
+- Implement proper error handling with try-catch blocks
+- Add JSDoc comments for public APIs and complex functions
+- Follow the single responsibility principle
+
+### 6. **Formatting Rules to Apply**
+
+```typescript
+// ✅ Good: Properly formatted and typed
+interface UserConfig {
+  readonly name: string;
+  readonly email: string;
+  readonly preferences: UserPreferences;
+}
+
+const createUser = async (
+  config: UserConfig
+): Promise<Result<User, ValidationError>> => {
+  try {
+    const validatedConfig = await validateUserConfig(config);
+    return success(new User(validatedConfig));
+  } catch (error) {
+    return failure(new ValidationError('Invalid user configuration', error));
+  }
+};
+```
+
+### 7. **Pre-commit Checks**
+
+Before suggesting any code changes, ensure:
+- [ ] Code passes ESLint validation (`yarn lint:check`)
+- [ ] Code is properly formatted with Prettier (`yarn format`)
+- [ ] TypeScript compilation succeeds (`yarn build`)
+- [ ] All imports are properly organized
+- [ ] No console.log statements in production code (use logger instead)
+- [ ] Proper error handling is implemented
+
+### 8. **File-Specific Rules**
+
+#### TypeScript Files (`.ts`, `.tsx`)
+- Use explicit return types for all functions
+- Implement proper error handling
+- Follow naming conventions (camelCase for variables/functions, PascalCase for classes/interfaces)
+
+#### Test Files (`.test.ts`, `.spec.ts`)
+- Allow relaxed typing rules for test utilities
+- Use descriptive test names
+- Group related tests with `describe` blocks
+
+#### Configuration Files (`.js`, `.json`)
+- Use consistent formatting
+- Include helpful comments where appropriate
+- Validate configuration schemas
+
+### 9. **Automated Formatting Commands**
+
+When working with code, use these commands:
+- `yarn format` - Format all source files with Prettier
+- `yarn lint` - Run ESLint on source files
+- `yarn lint:fix` - Auto-fix ESLint issues where possible
+- `yarn lint:check` - Check for linting issues without fixing
+
+### 10. **Integration with Development Workflow**
+
+- Format code automatically on save (if IDE supports it)
+- Run linting checks before commits
+- Ensure CI/CD pipeline includes linting and formatting checks
+- Use pre-commit hooks to enforce standards
+
+## Remember
+
+**NEVER generate code that doesn't follow these formatting and linting standards.** Always apply proper formatting, typing, and organization to ensure code quality and consistency across the project.
+
+When in doubt, run the linting and formatting commands to verify compliance before presenting code to the user.

@@ -1,4 +1,4 @@
-import { DateUtils } from "../utils/date-utils";
+import { DateUtils } from '../utils/date-utils';
 import {
   CommitSizeMetrics,
   TimePatterns,
@@ -6,21 +6,21 @@ import {
   WeeklyPattern,
   COMMIT_SIZE_THRESHOLDS,
   DISPLAY_LIMITS,
-} from "./types";
+} from './types';
 
 /**
  * Helper function to find most productive day
  */
 export function getMostProductiveDay(commits: any[]): string {
-  if (!commits || commits.length === 0) return "N/A";
+  if (!commits || commits.length === 0) return 'N/A';
 
   const dayCommits = new Map<string, number>();
-  commits.forEach((commit) => {
+  commits.forEach(commit => {
     const day = DateUtils.formatDate(commit.date);
     dayCommits.set(day, (dayCommits.get(day) || 0) + 1);
   });
 
-  let maxDay = "";
+  let maxDay = '';
   let maxCommits = 0;
   for (const [day, count] of dayCommits) {
     if (count > maxCommits) {
@@ -55,15 +55,15 @@ export class CommitSizeCalculator {
 
     const median = commitSizes[Math.floor(commitSizes.length / 2)] || 0;
     const small = commitSizes.filter(
-      (size) => size <= COMMIT_SIZE_THRESHOLDS.SMALL,
+      size => size <= COMMIT_SIZE_THRESHOLDS.SMALL
     ).length;
     const medium = commitSizes.filter(
-      (size) =>
+      size =>
         size > COMMIT_SIZE_THRESHOLDS.SMALL &&
-        size <= COMMIT_SIZE_THRESHOLDS.MEDIUM,
+        size <= COMMIT_SIZE_THRESHOLDS.MEDIUM
     ).length;
     const large = commitSizes.filter(
-      (size) => size > COMMIT_SIZE_THRESHOLDS.MEDIUM,
+      size => size > COMMIT_SIZE_THRESHOLDS.MEDIUM
     ).length;
 
     const total = commits.length;
@@ -92,7 +92,7 @@ export class TimePatternCalculator {
         weekendPercent: 0,
         hourlyPattern: [],
         timePeriods: [],
-        peakHour: { hour: 0, commits: 0, label: "N/A" },
+        peakHour: { hour: 0, commits: 0, label: 'N/A' },
         earlyBird: { commits: 0, percentage: 0 },
         nightOwl: { commits: 0, percentage: 0 },
         totalCommits: 0,
@@ -103,11 +103,11 @@ export class TimePatternCalculator {
 
     // Legacy calculations for backward compatibility
     const workingHoursCommits = commits.filter((c: any) =>
-      DateUtils.isWorkingHours(c.date),
+      DateUtils.isWorkingHours(c.date)
     ).length;
 
     const weekendCommits = commits.filter((c: any) =>
-      DateUtils.isWeekend(c.date),
+      DateUtils.isWeekend(c.date)
     ).length;
 
     // Enhanced hourly pattern analysis
@@ -124,7 +124,7 @@ export class TimePatternCalculator {
             : 0;
         const barLength = Math.max(1, Math.round(barPercentage / 5)); // Scale to reasonable length
         const bar =
-          "▓".repeat(barLength) + "░".repeat(Math.max(0, 20 - barLength));
+          '▓'.repeat(barLength) + '░'.repeat(Math.max(0, 20 - barLength));
 
         return {
           hour,
@@ -133,7 +133,7 @@ export class TimePatternCalculator {
           bar,
           label: DateUtils.formatHourLabel(hour),
         };
-      },
+      }
     );
 
     // Find peak hour
@@ -142,7 +142,7 @@ export class TimePatternCalculator {
         commits > peak.commits
           ? { hour, commits, label: DateUtils.formatHourLabel(hour) }
           : peak,
-      { hour: 0, commits: 0, label: "N/A" },
+      { hour: 0, commits: 0, label: 'N/A' }
     );
 
     // Time period analysis
@@ -150,10 +150,10 @@ export class TimePatternCalculator {
 
     // Early bird and night owl analysis
     const earlyBirdCommits = commits.filter((c: any) =>
-      DateUtils.isEarlyBird(c.date),
+      DateUtils.isEarlyBird(c.date)
     ).length;
     const nightOwlCommits = commits.filter((c: any) =>
-      DateUtils.isNightOwl(c.date),
+      DateUtils.isNightOwl(c.date)
     ).length;
 
     return {
@@ -161,7 +161,7 @@ export class TimePatternCalculator {
       workingHoursCommits,
       weekendCommits,
       workingHoursPercent: Math.round(
-        (workingHoursCommits / totalCommits) * 100,
+        (workingHoursCommits / totalCommits) * 100
       ),
       weekendPercent: Math.round((weekendCommits / totalCommits) * 100),
 
@@ -189,16 +189,16 @@ export class TimePatternCalculator {
 
     // Initialize periods
     const periods = [
-      { name: "Early Morning", range: "6AM-9AM", isWorking: false },
-      { name: "Morning", range: "9AM-12PM", isWorking: true },
-      { name: "Lunch Time", range: "12PM-2PM", isWorking: true },
-      { name: "Afternoon", range: "2PM-6PM", isWorking: true },
-      { name: "Evening", range: "6PM-9PM", isWorking: false },
-      { name: "Night", range: "9PM-2AM", isWorking: false },
-      { name: "Late Night", range: "2AM-6AM", isWorking: false },
+      { name: 'Early Morning', range: '6AM-9AM', isWorking: false },
+      { name: 'Morning', range: '9AM-12PM', isWorking: true },
+      { name: 'Lunch Time', range: '12PM-2PM', isWorking: true },
+      { name: 'Afternoon', range: '2PM-6PM', isWorking: true },
+      { name: 'Evening', range: '6PM-9PM', isWorking: false },
+      { name: 'Night', range: '9PM-2AM', isWorking: false },
+      { name: 'Late Night', range: '2AM-6AM', isWorking: false },
     ];
 
-    periods.forEach((period) => {
+    periods.forEach(period => {
       periodMap.set(period.name, {
         commits: 0,
         range: period.range,
@@ -236,7 +236,7 @@ export class ActivityCalculator {
     if (!commits || commits.length === 0) {
       return {
         longestStreak: 0,
-        mostProductiveDay: "N/A",
+        mostProductiveDay: 'N/A',
         consistencyScore: 0,
       };
     }
@@ -248,7 +248,7 @@ export class ActivityCalculator {
     ].length;
     const totalDays = DateUtils.getDaysInPeriod(
       period.startDate,
-      period.endDate,
+      period.endDate
     );
     const consistencyScore = Math.round((activeDays / totalDays) * 100);
 
@@ -272,7 +272,7 @@ export class ActivityCalculator {
       const date = new Date(day as string);
       if (lastDate) {
         const daysDiff = Math.round(
-          (date.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24),
+          (date.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
         );
         if (daysDiff === 1) {
           currentStreak++;
@@ -298,7 +298,7 @@ export class WeeklyPatternGenerator {
       return [];
     }
 
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayCommits = new Array(7).fill(0);
 
     commits.forEach((commit: any) => {
@@ -313,8 +313,8 @@ export class WeeklyPatternGenerator {
         maxDayCommits > 0 ? Math.round((count / maxDayCommits) * 100) : 0;
       const barLength = Math.max(1, Math.round(percentage / 10));
       const bar =
-        "▓".repeat(barLength) +
-        "░".repeat(Math.max(0, DISPLAY_LIMITS.WEEKLY_BAR_LENGTH - barLength));
+        '▓'.repeat(barLength) +
+        '░'.repeat(Math.max(0, DISPLAY_LIMITS.WEEKLY_BAR_LENGTH - barLength));
 
       return {
         dayName,

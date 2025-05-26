@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from 'child_process';
 
 /**
  * Git utilities for working with git configuration and user information
@@ -16,8 +16,8 @@ export class GitUtils {
    */
   private static getCurrentUserName(): string | null {
     try {
-      const userName = execSync("git config user.name", {
-        encoding: "utf8",
+      const userName = execSync('git config user.name', {
+        encoding: 'utf8',
       }).trim();
       return userName || null;
     } catch (error) {
@@ -30,8 +30,8 @@ export class GitUtils {
    */
   private static getCurrentUserEmail(): string | null {
     try {
-      const userEmail = execSync("git config user.email", {
-        encoding: "utf8",
+      const userEmail = execSync('git config user.email', {
+        encoding: 'utf8',
       }).trim();
       return userEmail || null;
     } catch (error) {
@@ -45,7 +45,7 @@ export class GitUtils {
  */
 
 export interface GitRemoteInfo {
-  provider: "github" | "gitlab" | "bitbucket" | "other";
+  provider: 'github' | 'gitlab' | 'bitbucket' | 'other';
   organization: string;
   repository: string;
   url: string;
@@ -63,7 +63,7 @@ export function parseGitRemoteUrl(remoteUrl: string): GitRemoteInfo | null {
   let url = remoteUrl.trim();
 
   // Remove .git suffix if present
-  if (url.endsWith(".git")) {
+  if (url.endsWith('.git')) {
     url = url.slice(0, -4);
   }
 
@@ -105,17 +105,17 @@ export function parseGitRemoteUrl(remoteUrl: string): GitRemoteInfo | null {
 /**
  * Determine the git provider based on hostname
  */
-function getGitProvider(hostname: string): GitRemoteInfo["provider"] {
+function getGitProvider(hostname: string): GitRemoteInfo['provider'] {
   const host = hostname.toLowerCase();
 
-  if (host.includes("github")) {
-    return "github";
-  } else if (host.includes("gitlab")) {
-    return "gitlab";
-  } else if (host.includes("bitbucket")) {
-    return "bitbucket";
+  if (host.includes('github')) {
+    return 'github';
+  } else if (host.includes('gitlab')) {
+    return 'gitlab';
+  } else if (host.includes('bitbucket')) {
+    return 'bitbucket';
   } else {
-    return "other";
+    return 'other';
   }
 }
 
@@ -124,7 +124,7 @@ function getGitProvider(hostname: string): GitRemoteInfo["provider"] {
  */
 export function organizationMatches(
   orgName1: string,
-  orgName2: string,
+  orgName2: string
 ): boolean {
   return orgName1.toLowerCase() === orgName2.toLowerCase();
 }

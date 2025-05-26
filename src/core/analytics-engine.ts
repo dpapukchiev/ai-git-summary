@@ -1,17 +1,17 @@
-import { WorkSummary } from "../types";
+import { WorkSummary } from '../types';
 import {
   CommitSizeMetrics,
   TimePatterns,
   ActivityMetrics,
   WeeklyPattern,
-} from "../formatters/types";
+} from '../formatters/types';
 import {
   CommitSizeCalculator,
   TimePatternCalculator,
   ActivityCalculator,
   WeeklyPatternGenerator,
-} from "../formatters/calculators";
-import { AchievementGenerator } from "../formatters/achievement-generator";
+} from '../formatters/calculators';
+import { AchievementGenerator } from '../formatters/achievement-generator';
 
 /**
  * Repository contribution breakdown
@@ -78,7 +78,7 @@ export class AnalyticsEngine {
     // Activity insights (streaks, productivity, consistency)
     const activityMetrics = ActivityCalculator.calculateMetrics(
       commits,
-      period,
+      period
     );
 
     // Weekly activity pattern
@@ -87,14 +87,14 @@ export class AnalyticsEngine {
     // Repository contribution breakdown
     const repositoryBreakdown = this.calculateRepositoryBreakdown(
       repositories,
-      commits,
+      commits
     );
 
     // Achievements based on all computed metrics
     const achievements = AchievementGenerator.generate(
       stats,
       timePatterns,
-      repositories,
+      repositories
     );
 
     return {
@@ -112,19 +112,19 @@ export class AnalyticsEngine {
    */
   private static calculateRepositoryBreakdown(
     repositories: any[],
-    commits: any[],
+    commits: any[]
   ): RepositoryContribution[] {
     return (
       repositories
-        .map((repo) => {
-          const repoCommits = commits.filter((c) => c.repoId === repo.id);
+        .map(repo => {
+          const repoCommits = commits.filter(c => c.repoId === repo.id);
           const totalInsertions = repoCommits.reduce(
             (sum, c) => sum + c.insertions,
-            0,
+            0
           );
           const totalDeletions = repoCommits.reduce(
             (sum, c) => sum + c.deletions,
-            0,
+            0
           );
 
           return {
@@ -139,7 +139,7 @@ export class AnalyticsEngine {
           };
         })
         // Filter out repositories with no contributions
-        .filter((repo) => repo.commits > 0 || repo.linesChanged > 0)
+        .filter(repo => repo.commits > 0 || repo.linesChanged > 0)
         // Sort by contributions (commits first, then lines changed)
         .sort((a, b) => {
           if (b.commits !== a.commits) {

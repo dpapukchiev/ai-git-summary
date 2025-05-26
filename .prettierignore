@@ -1,0 +1,43 @@
+# Build outputs
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Data files
+data/
+
+# Cache directories
+.cache/
+
+# Lock files (should not be formatted)
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
+
+# Generated files
+*.generated.*
+
+# Binary files
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Coverage reports
+coverage/
+
+# Temporary files
+*.tmp
+*.temp 

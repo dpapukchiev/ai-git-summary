@@ -1,0 +1,39 @@
+# Build outputs
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Data files
+data/
+
+# Cache directories
+.eslintcache
+.cache/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Yarn
+.yarn/
+.pnp.*
+
+# Coverage reports
+coverage/
+
+# Temporary files
+*.tmp
+*.temp 

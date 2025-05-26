@@ -1,14 +1,14 @@
-import { DatabaseManager } from "../storage/database";
-import { Commit, WorkSummary, TimePeriod } from "../types";
-import { DateUtils } from "../utils/date-utils";
-import { LanguageDetector } from "../utils/language-detector";
+import { DatabaseManager } from '../storage/database';
+import { Commit, TimePeriod, WorkSummary } from '../types';
+import { DateUtils } from '../utils/date-utils';
+import { LanguageDetector } from '../utils/language-detector';
 
 // Constants for better maintainability
 const FILE_FILTERING_RULES = {
   MIN_LENGTH: 3,
   MAX_LENGTH: 100,
-  EXCLUDED_PREFIXES: ["http"],
-  EXCLUDED_CHARACTERS: ["@"],
+  EXCLUDED_PREFIXES: ['http'],
+  EXCLUDED_CHARACTERS: ['@'],
 } as const;
 
 // Single Responsibility: Language detection and statistics
@@ -23,8 +23,8 @@ class LanguageStatsCalculator {
 
     // Get commit IDs from the filtered commits
     const commitIds = commits
-      .map((c) => c.id)
-      .filter((id) => id !== undefined) as number[];
+      .map(c => c.id)
+      .filter(id => id !== undefined) as number[];
 
     if (commitIds.length === 0) {
       return new Map();
@@ -43,7 +43,7 @@ class LanguageStatsCalculator {
 
     // Convert to language statistics using the enhanced detector
     const filePathArray = Array.from(filePathStats.entries()).map(
-      ([filePath, changes]) => ({ filePath, changes }),
+      ([filePath, changes]) => ({ filePath, changes })
     );
 
     return LanguageDetector.calculateLanguageStats(filePathArray);
@@ -65,7 +65,7 @@ class LanguageStatsCalculator {
    * Get detailed breakdown of file changes for debugging purposes
    */
   getFilePathBreakdown(
-    commits: Commit[],
+    commits: Commit[]
   ): Array<{ filePath: string; changes: number }> {
     if (commits.length === 0) {
       return [];
@@ -73,8 +73,8 @@ class LanguageStatsCalculator {
 
     // Get commit IDs from the filtered commits
     const commitIds = commits
-      .map((c) => c.id)
-      .filter((id) => id !== undefined) as number[];
+      .map(c => c.id)
+      .filter(id => id !== undefined) as number[];
 
     if (commitIds.length === 0) {
       return [];
@@ -124,7 +124,7 @@ class FileStatsCalculator {
   private findFilePatterns(message: string): string[] {
     const patterns = [
       /([a-zA-Z0-9_\-/]+\.[a-zA-Z0-9]+)/g,
-      /([a-zA-Z0-9_\-]+\/[a-zA-Z0-9_\-/.]+)/g,
+      /([a-zA-Z0-9_-]+\/[a-zA-Z0-9_\-/.]+)/g,
     ];
 
     const allMatches: string[] = [];
@@ -140,7 +140,7 @@ class FileStatsCalculator {
 
   private isValidFilePath(filePath: string): boolean {
     return (
-      filePath.includes(".") &&
+      filePath.includes('.') &&
       filePath.length >= FILE_FILTERING_RULES.MIN_LENGTH &&
       filePath.length <= FILE_FILTERING_RULES.MAX_LENGTH &&
       !this.hasExcludedPrefixes(filePath) &&
@@ -149,14 +149,14 @@ class FileStatsCalculator {
   }
 
   private hasExcludedPrefixes(filePath: string): boolean {
-    return FILE_FILTERING_RULES.EXCLUDED_PREFIXES.some((prefix) =>
-      filePath.startsWith(prefix),
+    return FILE_FILTERING_RULES.EXCLUDED_PREFIXES.some(prefix =>
+      filePath.startsWith(prefix)
     );
   }
 
   private hasExcludedCharacters(filePath: string): boolean {
-    return FILE_FILTERING_RULES.EXCLUDED_CHARACTERS.some((char) =>
-      filePath.includes(char),
+    return FILE_FILTERING_RULES.EXCLUDED_CHARACTERS.some(char =>
+      filePath.includes(char)
     );
   }
 
@@ -177,19 +177,17 @@ class RepositoryFilter {
       return allRepositories;
     }
 
-    return allRepositories.filter((repo) =>
-      this.matchesAnyPath(repo, repositoryPaths),
+    return allRepositories.filter(repo =>
+      this.matchesAnyPath(repo, repositoryPaths)
     );
   }
 
   private matchesAnyPath(repo: any, paths: string[]): boolean {
-    return paths.some((path) => repo.path.includes(path) || repo.name === path);
+    return paths.some(path => repo.path.includes(path) || repo.name === path);
   }
 
   extractRepositoryIds(repositories: any[]): number[] {
-    return repositories
-      .map((repo) => repo.id!)
-      .filter((id) => id !== undefined);
+    return repositories.map(repo => repo.id!).filter(id => id !== undefined);
   }
 }
 
@@ -200,7 +198,7 @@ class CommitStatsCalculator {
   calculateStats(
     commits: Commit[],
     period: TimePeriod,
-    repositoryIds: number[],
+    repositoryIds: number[]
   ) {
     const basicStats = this.calculateBasicStats(commits);
     const timeStats = this.calculateTimeStats(commits, period);
@@ -236,7 +234,7 @@ class CommitStatsCalculator {
     const activeDays = DateUtils.getActiveDays(commits);
     const periodDays = DateUtils.getDaysInPeriod(
       period.startDate,
-      period.endDate,
+      period.endDate
     );
     const averageCommitsPerDay =
       periodDays > 0 ? commits.length / periodDays : 0;
@@ -249,7 +247,7 @@ class CommitStatsCalculator {
 
   private formatTopLanguages(
     languageStats: Map<string, number>,
-    limit: number,
+    limit: number
   ) {
     return LanguageDetector.filterAndSortLanguages(languageStats, limit);
   }
@@ -275,7 +273,7 @@ export class DataAggregator {
   async generateWorkSummary(
     period: TimePeriod,
     repositoryPaths?: string[],
-    author?: string,
+    author?: string
   ): Promise<WorkSummary> {
     const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
     const commits = this.getCommitsForPeriod(period, repositories, author);
@@ -284,7 +282,7 @@ export class DataAggregator {
     const stats = this.statsCalculator.calculateStats(
       commits,
       period,
-      repositoryIds,
+      repositoryIds
     );
 
     return {
@@ -298,7 +296,7 @@ export class DataAggregator {
   async getCommitTrends(
     period: TimePeriod,
     repositoryPaths?: string[],
-    author?: string,
+    author?: string
   ): Promise<Map<string, number>> {
     const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
     const commits = this.getCommitsForPeriod(period, repositories, author);
@@ -309,7 +307,7 @@ export class DataAggregator {
   async getAuthorStats(
     period: TimePeriod,
     repositoryPaths?: string[],
-    author?: string,
+    author?: string
   ): Promise<
     Array<{
       author: string;
@@ -329,7 +327,7 @@ export class DataAggregator {
       this.repositoryFilter.getFilteredRepositories(repositoryPaths);
 
     if (repositories.length === 0) {
-      throw new Error("No repositories found for analysis");
+      throw new Error('No repositories found for analysis');
     }
 
     return repositories;
@@ -338,14 +336,14 @@ export class DataAggregator {
   private getCommitsForPeriod(
     period: TimePeriod,
     repositories: any[],
-    author?: string,
+    author?: string
   ): Commit[] {
     const repoIds = this.repositoryFilter.extractRepositoryIds(repositories);
     return this.db.getCommitsByDateRange(
       period.startDate,
       period.endDate,
       repoIds,
-      author,
+      author
     );
   }
 

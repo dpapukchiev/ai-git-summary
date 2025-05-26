@@ -25,13 +25,13 @@ export interface FileChange {
   id?: number;
   commitId: number;
   filePath: string;
-  changeType: "added" | "modified" | "deleted" | "renamed";
+  changeType: 'added' | 'modified' | 'deleted' | 'renamed';
   insertions: number;
   deletions: number;
 }
 
 export interface TimePeriod {
-  type: "week" | "month" | "quarter" | "year" | "rolling" | "custom";
+  type: 'week' | 'month' | 'quarter' | 'year' | 'rolling' | 'custom';
   startDate: Date;
   endDate: Date;
   label: string;
@@ -68,12 +68,12 @@ export interface CachedSummary {
 }
 
 export type PeriodType =
-  | "1week"
-  | "2weeks"
-  | "1month"
-  | "3months"
-  | "6months"
-  | "9months"
-  | "1year"
-  | "ytd"
-  | "custom";
+  | '1week'
+  | '2weeks'
+  | '1month'
+  | '3months'
+  | '6months'
+  | '9months'
+  | '1year'
+  | 'ytd'
+  | 'custom';
