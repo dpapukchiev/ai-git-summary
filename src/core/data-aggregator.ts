@@ -15,25 +15,23 @@ const FILE_FILTERING_RULES = {
 class LanguageStatsCalculator {
   constructor(private db: DatabaseManager) {}
 
-  calculateFromCommits(
-    commits: Commit[],
-    repositoryIds: number[]
-  ): Map<string, number> {
-    // Get file changes for the period covered by these commits
+  calculateFromCommits(commits: Commit[]): Map<string, number> {
+    // Get file changes only for the specific commits we're analyzing
     if (commits.length === 0) {
       return new Map();
     }
 
-    const dates = commits.map((c) => c.date);
-    const startDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-    const endDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    // Get commit IDs from the filtered commits
+    const commitIds = commits
+      .map((c) => c.id)
+      .filter((id) => id !== undefined) as number[];
 
-    // Get all file changes for this period and repositories
-    const fileChanges = this.db.getFileChangesByDateRange(
-      startDate,
-      endDate,
-      repositoryIds.length > 0 ? repositoryIds : undefined
-    );
+    if (commitIds.length === 0) {
+      return new Map();
+    }
+
+    // Get file changes only for these specific commits
+    const fileChanges = this.getFileChangesForCommits(commitIds);
 
     // Aggregate changes by file path
     const filePathStats = new Map<string, number>();
@@ -52,25 +50,38 @@ class LanguageStatsCalculator {
   }
 
   /**
+   * Get file changes for specific commits
+   */
+  private getFileChangesForCommits(commitIds: number[]) {
+    const allFileChanges = [];
+    for (const commitId of commitIds) {
+      const changes = this.db.getFileChangesByCommit(commitId);
+      allFileChanges.push(...changes);
+    }
+    return allFileChanges;
+  }
+
+  /**
    * Get detailed breakdown of file changes for debugging purposes
    */
   getFilePathBreakdown(
-    commits: Commit[],
-    repositoryIds: number[]
+    commits: Commit[]
   ): Array<{ filePath: string; changes: number }> {
     if (commits.length === 0) {
       return [];
     }
 
-    const dates = commits.map((c) => c.date);
-    const startDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-    const endDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    // Get commit IDs from the filtered commits
+    const commitIds = commits
+      .map((c) => c.id)
+      .filter((id) => id !== undefined) as number[];
 
-    const fileChanges = this.db.getFileChangesByDateRange(
-      startDate,
-      endDate,
-      repositoryIds.length > 0 ? repositoryIds : undefined
-    );
+    if (commitIds.length === 0) {
+      return [];
+    }
+
+    // Get file changes only for these specific commits
+    const fileChanges = this.getFileChangesForCommits(commitIds);
 
     const filePathStats = new Map<string, number>();
     for (const change of fileChanges) {
@@ -195,17 +206,12 @@ class CommitStatsCalculator {
     const basicStats = this.calculateBasicStats(commits);
     const timeStats = this.calculateTimeStats(commits, period);
     const languageCalculator = new LanguageStatsCalculator(this.db);
-    const languageStats = languageCalculator.calculateFromCommits(
-      commits,
-      repositoryIds
-    );
+    const languageStats = languageCalculator.calculateFromCommits(commits);
 
     let debugInfo = {};
     if (includeDebugInfo) {
-      const filePathBreakdown = languageCalculator.getFilePathBreakdown(
-        commits,
-        repositoryIds
-      );
+      const filePathBreakdown =
+        languageCalculator.getFilePathBreakdown(commits);
       debugInfo = {
         otherFilesAnalysis:
           LanguageDetector.analyzeOtherFiles(filePathBreakdown),
