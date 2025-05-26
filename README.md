@@ -456,29 +456,75 @@ The tool automatically creates a SQLite database in `./data/git-summary.db` to s
 ```
 src/
 ├── cli/           # Command line interface
+│   ├── commands/  # Command definitions and handlers
+│   └── index.ts   # Main CLI entry point
 ├── core/          # Core analysis logic
+│   ├── git-analyzer.ts        # Git repository analysis
+│   ├── data-aggregator.ts     # Data aggregation and summarization
+│   ├── commit-fetcher.ts      # Commit data fetching
+│   ├── commit-processor.ts    # Commit data processing
+│   └── repository-discovery.ts # Repository discovery logic
+├── formatters/    # Output formatters
+│   ├── text-formatter.ts      # Text output formatting
+│   ├── markdown-formatter.ts  # Markdown output formatting
+│   └── calculators.ts         # Statistics calculators
 ├── storage/       # Database management
+│   └── database.ts # SQLite database operations
 ├── types/         # TypeScript definitions
 └── utils/         # Utility functions
+    ├── logger.ts    # Logging utilities
+    ├── date-utils.ts # Date manipulation helpers
+    └── git-utils.ts  # Git-related utilities
 ```
 
 ### Scripts
 
 ```bash
-npm run build      # Compile TypeScript
-npm run dev        # Run in development mode
-npm run lint       # Run ESLint
+npm run build      # Compile TypeScript to dist/
+npm run dev        # Run in development mode with tsx
+npm run start      # Run built version from dist/
+npm run lint       # Run ESLint on source files
 npm run format     # Format code with Prettier
 ```
+
+### Dependencies
+
+**Core Dependencies:**
+
+- `better-sqlite3` - SQLite database operations
+- `simple-git` - Git repository interactions
+- `commander` - CLI framework
+- `chalk` - Terminal styling
+- `winston` - Logging
+- `openai` - AI integration (ready for future features)
+
+**Development Dependencies:**
+
+- `typescript` - TypeScript compiler
+- `tsx` - TypeScript execution for development
+- `eslint` - Code linting
+- `prettier` - Code formatting
 
 ### Adding New Features
 
 The architecture is designed for extensibility:
 
-- **New Data Sources**: Extend the analyzer framework
-- **AI Integration**: Add summary generation with OpenAI/Anthropic
-- **Export Formats**: Add new output formats
-- **Time Periods**: Add custom period calculations
+- **New Commands**: Add command handlers in `src/cli/commands/handlers/`
+- **New Formatters**: Extend formatters in `src/formatters/`
+- **Data Sources**: Extend the analyzer framework in `src/core/`
+- **AI Integration**: Leverage existing OpenAI dependency for summaries
+- **Export Formats**: Add new output formats to formatters
+- **Time Periods**: Add custom period calculations in `src/utils/date-utils.ts`
+
+### Code Quality
+
+The project follows clean code principles:
+
+- TypeScript strict mode enabled
+- ESLint configuration for code quality
+- Prettier for consistent formatting
+- Modular architecture with clear separation of concerns
+- Comprehensive error handling and logging
 
 ## Future Enhancements
 
@@ -488,14 +534,39 @@ The architecture is designed for extensibility:
 - 🔗 **Integration APIs** - Asana, Jira, GitHub Issues
 - 📱 **Mobile App** - View summaries on mobile
 - 🏆 **Achievement System** - Productivity milestones
+- 🧪 **Testing Suite** - Comprehensive test coverage
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes following the existing code style
+4. Run linting and formatting (`npm run lint && npm run format`)
+5. Ensure the project builds successfully (`npm run build`)
+6. Commit your changes with descriptive messages
+7. Push to your branch (`git push origin feature/amazing-feature`)
+8. Submit a pull request
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd ai-git-summary
+
+# Install dependencies
+npm install
+# or
+yarn install
+
+# Run in development mode
+npm run dev --help
+# or
+./git-summary.sh --help
+
+# Build for production
+npm run build
+```
 
 ## License
 
