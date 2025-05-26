@@ -11,6 +11,8 @@ An intelligent git activity analyzer that provides comprehensive summaries of yo
 - 🤖 **AI-Ready** - Extensible for future AI-powered summaries
 - 🖥️ **CLI Interface** - Easy-to-use command line tools
 - 📄 **Multiple Formats** - Text, JSON, and Markdown output
+- 👤 **Author Filtering** - Filter commits by specific authors or current user
+- 🏢 **Organization Support** - Add all repositories from a specific organization
 
 ## Installation
 
@@ -185,12 +187,36 @@ Sync all tracked repositories (fetch new commits)
 ./git-summary.sh sync --concurrency 5
 ```
 
+#### `add-org <organization> <paths...> [options]`
+
+Add all repositories from a specific organization that exist in given directories
+
+**Arguments:**
+
+- `<organization>` - Organization name (e.g., 'zenjob', 'microsoft')
+- `<paths...>` - Directory paths to search for repositories
+
+**Options:**
+
+- `-d, --max-depth <depth>` - Maximum search depth (default: 3)
+- `-c, --concurrency <num>` - Number of repositories to process concurrently (default: 3)
+- `-n, --dry-run` - Show what repositories would be added without actually adding them
+
+**Examples:**
+
+```bash
+./git-summary.sh add-org mycompany ~/work ~/projects
+./git-summary.sh add-org mycompany ~/work --dry-run --max-depth 2
+```
+
 ### Summary Generation
 
 All summary commands support the following options:
 
 - `-r, --repos <repos...>` - Analyze specific repositories only
 - `-f, --format <format>` - Output format: `text`, `json`, `markdown` (default: text)
+- `-a, --author <author>` - Filter commits by author name or email
+- `--me` - Filter commits by current git user
 - `-v, --verbose` - Include detailed information
 
 #### `week [options]`
@@ -204,10 +230,6 @@ Generate last month summary (30 days)
 #### `months [options]`
 
 Generate last 3 months summary (90 days)
-
-#### `months [options]`
-
-Generate last 6 months summary (180 days)
 
 #### `year [options]`
 
@@ -226,6 +248,24 @@ Generate summary for custom date range
 - `--from <date>` - Start date (YYYY-MM-DD format)
 - `--to <date>` - End date (YYYY-MM-DD format)
 
+#### `repo-detail [options]`
+
+Analyze a specific repository in detail
+
+**Required Options:**
+
+- `-r, --repo <repo>` - Repository name or path to analyze
+
+**Options:**
+
+- `--period <period>` - Time period (1week, 1month, 3months, 6months, 1year, ytd) (default: 1month)
+- `--from <date>` - Start date (YYYY-MM-DD) for custom period
+- `--to <date>` - End date (YYYY-MM-DD) for custom period
+- `-a, --author <author>` - Filter commits by author name or email
+- `--me` - Filter commits by current git user
+- `-f, --format <format>` - Output format: `text`, `json`, `markdown` (default: text)
+- `-v, --verbose` - Verbose output
+
 **Examples:**
 
 ```bash
@@ -234,8 +274,16 @@ Generate summary for custom date range
 ./git-summary.sh month --format markdown
 ./git-summary.sh year --repos "project1" "project2"
 
+# Filter by author
+./git-summary.sh month --author "john@example.com" --verbose
+./git-summary.sh week --me --format json
+
 # Custom period
 ./git-summary.sh period --from 2024-01-01 --to 2024-03-31 --format json
+
+# Repository detail analysis
+./git-summary.sh repo-detail --repo "my-project" --period 3months --verbose
+./git-summary.sh repo-detail --repo "my-project" --from 2024-01-01 --to 2024-03-31 --me
 ```
 
 ## Complete Command Reference
@@ -244,19 +292,22 @@ Generate summary for custom date range
 # Repository Management
 ./git-summary.sh add-repo <path> [--name <name>]
 ./git-summary.sh discover <paths...> [--max-depth <depth>] [--concurrency <num>]
+./git-summary.sh add-org <organization> <paths...> [--max-depth <depth>] [--concurrency <num>] [--dry-run]
 ./git-summary.sh list
 ./git-summary.sh sync [--repos <repos...>] [--concurrency <num>]
 
 # Time Period Summaries
-./git-summary.sh week [--repos <repos...>] [--format <format>] [--verbose]
-./git-summary.sh month [--repos <repos...>] [--format <format>] [--verbose]
-./git-summary.sh months [--repos <repos...>] [--format <format>] [--verbose]  # 3 months
-./git-summary.sh months [--repos <repos...>] [--format <format>] [--verbose]  # 6 months
-./git-summary.sh year [--repos <repos...>] [--format <format>] [--verbose]
-./git-summary.sh ytd [--repos <repos...>] [--format <format>] [--verbose]
+./git-summary.sh week [--repos <repos...>] [--format <format>] [--author <author>] [--me] [--verbose]
+./git-summary.sh month [--repos <repos...>] [--format <format>] [--author <author>] [--me] [--verbose]
+./git-summary.sh months [--repos <repos...>] [--format <format>] [--author <author>] [--me] [--verbose]  # 3 months
+./git-summary.sh year [--repos <repos...>] [--format <format>] [--author <author>] [--me] [--verbose]
+./git-summary.sh ytd [--repos <repos...>] [--format <format>] [--author <author>] [--me] [--verbose]
 
 # Custom Period
-./git-summary.sh period --from YYYY-MM-DD --to YYYY-MM-DD [--repos <repos...>] [--format <format>] [--verbose]
+./git-summary.sh period --from YYYY-MM-DD --to YYYY-MM-DD [--repos <repos...>] [--format <format>] [--author <author>] [--me] [--verbose]
+
+# Repository Detail Analysis
+./git-summary.sh repo-detail --repo <repo> [--period <period>] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--author <author>] [--me] [--format <format>] [--verbose]
 
 # Help
 ./git-summary.sh --help
@@ -303,11 +354,14 @@ Repositories: 1
 # Analyze specific repositories for last quarter
 ./git-summary.sh months --repos "my-project" "side-project" --verbose --format markdown
 
-# Get detailed yearly summary
-./git-summary.sh year --verbose
+# Get detailed yearly summary for current user only
+./git-summary.sh year --me --verbose
 
 # Export JSON for external processing
 ./git-summary.sh month --format json > monthly-report.json
+
+# Detailed repository analysis
+./git-summary.sh repo-detail --repo "my-main-project" --period 6months --verbose
 ```
 
 ### Discover and Analyze Multiple Projects
@@ -316,8 +370,26 @@ Repositories: 1
 # Discover all git repositories in your work directories
 ./git-summary.sh discover ~/work ~/personal/projects
 
+# Add all repositories from a specific organization
+./git-summary.sh add-org mycompany ~/work ~/projects --dry-run
+./git-summary.sh add-org mycompany ~/work ~/projects
+
 # Generate comprehensive summary
 ./git-summary.sh months --verbose
+```
+
+### Author-Specific Analysis
+
+```bash
+# Analyze your own commits only
+./git-summary.sh month --me --verbose
+
+# Analyze specific contributor's work
+./git-summary.sh period --from 2024-01-01 --to 2024-03-31 --author "jane@company.com"
+
+# Compare team member contributions
+./git-summary.sh month --author "john@company.com" --format json > john-stats.json
+./git-summary.sh month --author "jane@company.com" --format json > jane-stats.json
 ```
 
 ### Workflow Examples
@@ -325,19 +397,24 @@ Repositories: 1
 ```bash
 # Daily workflow
 ./git-summary.sh sync --concurrency 5    # Sync all repos quickly
-./git-summary.sh week --verbose          # Get detailed weekly summary
+./git-summary.sh week --me --verbose     # Get detailed weekly summary for your work
 
 # Monthly reporting
 ./git-summary.sh month --format markdown > reports/monthly-$(date +%Y-%m).md
 
 # Project-specific analysis
 ./git-summary.sh add-repo ~/projects/new-project --name "New Project"
-./git-summary.sh month --repos "New Project" --verbose
+./git-summary.sh repo-detail --repo "New Project" --period 1month --verbose
 
-# Batch discovery and analysis
+# Organization onboarding
 ./git-summary.sh discover ~/work ~/side-projects --max-depth 3 --concurrency 10
+./git-summary.sh add-org mycompany ~/work --concurrency 8
 ./git-summary.sh sync --concurrency 8
 ./git-summary.sh ytd --format json > yearly-summary.json
+
+# Team analysis
+./git-summary.sh month --verbose > team-summary.txt
+./git-summary.sh month --me --format markdown > my-contributions.md
 ```
 
 ## Configuration
