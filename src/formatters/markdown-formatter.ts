@@ -198,31 +198,46 @@ export function printMarkdownSummary(summary: any) {
 
   // Repository breakdown
   if (summary.repositories.length > 1) {
-    log.output("## 📁 Repository Activity\n", "markdown-formatter");
-    for (const repo of summary.repositories) {
-      const repoCommits = summary.commits
-        ? summary.commits.filter((c: any) => c.repoId === repo.id).length
-        : 0;
-      const repoLines = summary.commits
-        ? summary.commits
-            .filter((c: any) => c.repoId === repo.id)
-            .reduce(
-              (sum: number, c: any) => sum + c.insertions + c.deletions,
-              0
-            )
-        : 0;
+    // Calculate contributions and filter out repositories with no activity
+    const reposWithContributions = summary.repositories
+      .map((repo: any) => {
+        const repoCommits = summary.commits
+          ? summary.commits.filter((c: any) => c.repoId === repo.id).length
+          : 0;
+        const repoLines = summary.commits
+          ? summary.commits
+              .filter((c: any) => c.repoId === repo.id)
+              .reduce(
+                (sum: number, c: any) => sum + c.insertions + c.deletions,
+                0
+              )
+          : 0;
 
-      log.output(`### 📂 ${repo.name}\n`, "markdown-formatter");
-      log.output(`- **Path:** \`${repo.path}\``, "markdown-formatter");
-      log.output(`- **Commits:** ${repoCommits}`, "markdown-formatter");
-      log.output(
-        `- **Lines Changed:** ${repoLines.toLocaleString()}`,
-        "markdown-formatter"
-      );
-      if (repo.remoteUrl) {
-        log.output(`- **Remote:** ${repo.remoteUrl}`, "markdown-formatter");
+        return {
+          ...repo,
+          commits: repoCommits,
+          linesChanged: repoLines,
+        };
+      })
+      // Filter out repositories with no contributions
+      .filter((repo: any) => repo.commits > 0 || repo.linesChanged > 0);
+
+    // Only show the breakdown if there are repositories with contributions
+    if (reposWithContributions.length > 0) {
+      log.output("## 📁 Repository Activity\n", "markdown-formatter");
+      for (const repo of reposWithContributions) {
+        log.output(`### 📂 ${repo.name}\n`, "markdown-formatter");
+        log.output(`- **Path:** \`${repo.path}\``, "markdown-formatter");
+        log.output(`- **Commits:** ${repo.commits}`, "markdown-formatter");
+        log.output(
+          `- **Lines Changed:** ${repo.linesChanged.toLocaleString()}`,
+          "markdown-formatter"
+        );
+        if (repo.remoteUrl) {
+          log.output(`- **Remote:** ${repo.remoteUrl}`, "markdown-formatter");
+        }
+        log.output("", "markdown-formatter");
       }
-      log.output("", "markdown-formatter");
     }
   }
 

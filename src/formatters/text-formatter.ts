@@ -231,6 +231,8 @@ class SummaryFormatter {
           linesChanged: repoLines,
         };
       })
+      // Filter out repositories with no contributions
+      .filter((repo: any) => repo.commits > 0 || repo.linesChanged > 0)
       .sort((a: any, b: any) => {
         // Sort by commits first (descending), then by lines changed (descending)
         if (b.commits !== a.commits) {
@@ -238,6 +240,11 @@ class SummaryFormatter {
         }
         return b.linesChanged - a.linesChanged;
       });
+
+    // Only show the breakdown if there are repositories with contributions
+    if (reposWithContributions.length === 0) {
+      return;
+    }
 
     log.output(
       "📁 Repository Breakdown (sorted by contributions):",
