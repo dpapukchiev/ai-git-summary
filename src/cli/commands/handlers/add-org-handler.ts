@@ -17,11 +17,11 @@ export class AddOrgHandler {
   async execute(
     organizationName: string,
     searchPaths: string[],
-    options: AddOrgOptions
+    options: AddOrgOptions,
   ): Promise<void> {
     log.output(
       `🔍 Discovering repositories from organization "${organizationName}"...`,
-      "add-org"
+      "add-org",
     );
 
     const absolutePaths = searchPaths.map((p) => path.resolve(p));
@@ -38,20 +38,20 @@ export class AddOrgHandler {
       await this.gitAnalyzer.discoverRepositoriesByOrganization(
         absolutePaths,
         organizationName,
-        maxDepth
+        maxDepth,
       );
 
     if (repositories.length === 0) {
       log.output(
         `No repositories found for organization "${organizationName}" in the specified paths.`,
-        "add-org"
+        "add-org",
       );
       return;
     }
 
     log.output(
       `\nFound ${repositories.length} repositories from "${organizationName}":`,
-      "add-org"
+      "add-org",
     );
     for (const repo of repositories) {
       const remoteInfo = repo.remoteUrl
@@ -67,11 +67,11 @@ export class AddOrgHandler {
     if (options.dryRun) {
       log.output(
         `\n🔍 Dry run completed. Would add ${repositories.length} repositories.`,
-        "add-org"
+        "add-org",
       );
       log.output(
         "Run without --dry-run to actually add these repositories.",
-        "add-org"
+        "add-org",
       );
       return;
     }
@@ -79,7 +79,7 @@ export class AddOrgHandler {
     const concurrency = parseInt(options.concurrency, 10);
     log.output(
       `\nAdding and analyzing repositories with concurrency: ${concurrency}...`,
-      "add-org"
+      "add-org",
     );
 
     const results = await processInParallel(
@@ -96,7 +96,7 @@ export class AddOrgHandler {
       (completed, total, repo, success) => {
         const status = success ? "✅" : "❌";
         log.output(`${status} [${completed}/${total}] ${repo.name}`, "add-org");
-      }
+      },
     );
 
     log.output(`\n🎉 Organization repository discovery complete!`, "add-org");

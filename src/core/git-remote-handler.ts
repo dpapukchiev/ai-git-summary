@@ -18,11 +18,11 @@ export class GitRemoteHandler {
 
   async filterRepositoriesByOrganization(
     repositories: Repository[],
-    organizationName: string
+    organizationName: string,
   ): Promise<Repository[]> {
     log.output(
       `🔎 Filtering ${repositories.length} repositories for organization: ${organizationName}`,
-      "git-remote-handler"
+      "git-remote-handler",
     );
 
     if (repositories.length === 0) {
@@ -37,25 +37,25 @@ export class GitRemoteHandler {
       if (!repo) {
         log.debug(
           `⚠️  Skipping undefined repository at index ${i}`,
-          "git-remote-handler"
+          "git-remote-handler",
         );
         continue;
       }
 
       log.debug(
         `[${i + 1}/${repositories.length}] Checking: ${repo.name}`,
-        "git-remote-handler"
+        "git-remote-handler",
       );
 
       const isMatch = await this.checkRepositoryOrganization(
         repo,
-        organizationName
+        organizationName,
       );
 
       if (isMatch) {
         log.output(
           `✅ MATCH! Adding to filtered results`,
-          "git-remote-handler"
+          "git-remote-handler",
         );
         filteredRepositories.push(repo);
       }
@@ -67,7 +67,7 @@ export class GitRemoteHandler {
 
   private async checkRepositoryOrganization(
     repository: Repository,
-    organizationName: string
+    organizationName: string,
   ): Promise<boolean> {
     try {
       const git = simpleGit(repository.path);
@@ -88,22 +88,22 @@ export class GitRemoteHandler {
 
       log.debug(
         `🏢 Parsed organization: ${remoteInfo.organization}`,
-        "git-remote-handler"
+        "git-remote-handler",
       );
       log.debug(
         `📊 Repository name: ${remoteInfo.repository}`,
-        "git-remote-handler"
+        "git-remote-handler",
       );
 
       const matches = organizationMatches(
         remoteInfo.organization,
-        organizationName
+        organizationName,
       );
 
       if (!matches) {
         log.debug(
           `❌ No match (expected: ${organizationName})`,
-          "git-remote-handler"
+          "git-remote-handler",
         );
       }
 
@@ -111,7 +111,7 @@ export class GitRemoteHandler {
     } catch (error) {
       log.debug(
         `❌ Error checking remote for repository ${repository.path}`,
-        "git-remote-handler"
+        "git-remote-handler",
       );
       log.debug(`Remote check error: ${error}`, "git-remote-handler");
       return false;
@@ -120,12 +120,12 @@ export class GitRemoteHandler {
 
   private logFilterResults(
     filteredRepositories: Repository[],
-    organizationName: string
+    organizationName: string,
   ): void {
     log.output(`\n🎯 Organization filtering complete!`, "git-remote-handler");
     log.output(
       `📊 Found ${filteredRepositories.length} repositories matching organization: ${organizationName}`,
-      "git-remote-handler"
+      "git-remote-handler",
     );
 
     if (filteredRepositories.length > 0) {
@@ -134,7 +134,7 @@ export class GitRemoteHandler {
         if (repo) {
           log.output(
             `   ${index + 1}. ${repo.name} (${repo.path})`,
-            "git-remote-handler"
+            "git-remote-handler",
           );
         }
       });

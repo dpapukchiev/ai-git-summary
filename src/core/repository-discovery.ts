@@ -19,7 +19,7 @@ export class RepositoryDiscovery {
   async discoverRepositories(searchPaths: string[]): Promise<Repository[]> {
     log.output(
       `🔍 Discovering repositories in ${searchPaths.length} search paths...`,
-      "repository-discovery"
+      "repository-discovery",
     );
 
     const repositories: Repository[] = [];
@@ -30,7 +30,7 @@ export class RepositoryDiscovery {
       if (!this.pathExists(searchPath)) {
         log.output(
           `⚠️  Search path does not exist: ${searchPath}`,
-          "repository-discovery"
+          "repository-discovery",
         );
         continue;
       }
@@ -38,21 +38,21 @@ export class RepositoryDiscovery {
       const repos = await this.findGitRepositories(searchPath);
       log.output(
         `Found ${repos.length} repositories in this path`,
-        "repository-discovery"
+        "repository-discovery",
       );
       repositories.push(...repos);
     }
 
     log.output(
       `📊 Total repositories discovered: ${repositories.length}`,
-      "repository-discovery"
+      "repository-discovery",
     );
     return repositories;
   }
 
   async findGitRepositories(
     basePath: string,
-    maxDepth: number = RepositoryDiscovery.DEFAULT_MAX_DEPTH
+    maxDepth: number = RepositoryDiscovery.DEFAULT_MAX_DEPTH,
   ): Promise<Repository[]> {
     const repositories: Repository[] = [];
 
@@ -64,7 +64,7 @@ export class RepositoryDiscovery {
     currentPath: string,
     depth: number,
     maxDepth: number,
-    repositories: Repository[]
+    repositories: Repository[],
   ): Promise<void> {
     if (depth > maxDepth) return;
 
@@ -82,12 +82,12 @@ export class RepositoryDiscovery {
         items,
         depth,
         maxDepth,
-        repositories
+        repositories,
       );
     } catch (error) {
       log.warn(
         `Could not read directory ${currentPath}`,
-        "repository-discovery"
+        "repository-discovery",
       );
       log.debug(`Directory read error: ${error}`, "repository-discovery");
     }
@@ -109,10 +109,10 @@ export class RepositoryDiscovery {
     items: fs.Dirent[],
     depth: number,
     maxDepth: number,
-    repositories: Repository[]
+    repositories: Repository[],
   ): Promise<void> {
     const subdirectories = items.filter(
-      (item) => item.isDirectory() && this.shouldSearchDirectory(item.name)
+      (item) => item.isDirectory() && this.shouldSearchDirectory(item.name),
     );
 
     for (const directory of subdirectories) {
@@ -121,7 +121,7 @@ export class RepositoryDiscovery {
         subdirectoryPath,
         depth + 1,
         maxDepth,
-        repositories
+        repositories,
       );
     }
   }

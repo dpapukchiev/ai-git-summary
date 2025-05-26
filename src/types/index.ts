@@ -25,13 +25,13 @@ export interface FileChange {
   id?: number;
   commitId: number;
   filePath: string;
-  changeType: 'added' | 'modified' | 'deleted' | 'renamed';
+  changeType: "added" | "modified" | "deleted" | "renamed";
   insertions: number;
   deletions: number;
 }
 
 export interface TimePeriod {
-  type: 'week' | 'month' | 'quarter' | 'year' | 'rolling' | 'custom';
+  type: "week" | "month" | "quarter" | "year" | "rolling" | "custom";
   startDate: Date;
   endDate: Date;
   label: string;
@@ -52,34 +52,6 @@ export interface WorkSummary {
   };
   commits: Commit[];
   aiSummary?: string;
-  categories?: WorkCategory[];
-}
-
-export interface WorkCategory {
-  name: string;
-  description: string;
-  commits: Commit[];
-  significance: 'high' | 'medium' | 'low';
-}
-
-export interface Config {
-  repositories: Repository[];
-  ai?: {
-    provider: 'openai' | 'anthropic' | 'local';
-    model: string;
-    apiKey?: string;
-  };
-  cache?: {
-    maxAge: string;
-    autoSync: boolean;
-  };
-  analysis?: {
-    excludePatterns: string[];
-    workingHours?: {
-      start: string;
-      end: string;
-    };
-  };
 }
 
 export interface CachedSummary {
@@ -91,15 +63,12 @@ export interface CachedSummary {
   generatedAt: Date;
 }
 
-export type PeriodType = '1week' | '2weeks' | '1month' | '3months' | '6months' | '9months' | '1year' | 'ytd';
-
-export interface AnalysisOptions {
-  repositories?: string[];
-  period?: PeriodType;
-  from?: Date;
-  to?: Date;
-  sync?: boolean;
-  format?: 'text' | 'json' | 'markdown';
-  export?: 'pdf' | 'html' | 'md';
-  verbose?: boolean;
-} 
+export type PeriodType =
+  | "1week"
+  | "2weeks"
+  | "1month"
+  | "3months"
+  | "6months"
+  | "9months"
+  | "1year"
+  | "ytd";

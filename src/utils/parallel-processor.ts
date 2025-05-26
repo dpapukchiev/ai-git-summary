@@ -18,7 +18,7 @@ export type ProgressCallback<T> = (
   completed: number,
   total: number,
   item: T,
-  success: boolean
+  success: boolean,
 ) => void;
 
 export interface ParallelProcessingOptions {
@@ -34,24 +34,24 @@ export async function processInParallel<T>(
   items: T[],
   processor: (item: T) => Promise<ProcessResult>,
   concurrency: number = 3,
-  progressCallback?: ProgressCallback<T>
+  progressCallback?: ProgressCallback<T>,
 ): Promise<ParallelProcessingResult<T>> {
   return processInParallelWithOptions(
     items,
     processor,
     { concurrency },
-    progressCallback
+    progressCallback,
   );
 }
 
 /**
  * Process items in parallel with full configuration options
  */
-export async function processInParallelWithOptions<T>(
+async function processInParallelWithOptions<T>(
   items: T[],
   processor: (item: T) => Promise<ProcessResult>,
   options: ParallelProcessingOptions = {},
-  progressCallback?: ProgressCallback<T>
+  progressCallback?: ProgressCallback<T>,
 ): Promise<ParallelProcessingResult<T>> {
   const {
     concurrency = 3,
@@ -82,7 +82,7 @@ export async function processInParallelWithOptions<T>(
             results.completed + results.failed,
             items.length,
             item,
-            true
+            true,
           );
         } else {
           results.failed++;
@@ -91,7 +91,7 @@ export async function processInParallelWithOptions<T>(
             results.completed + results.failed,
             items.length,
             item,
-            false
+            false,
           );
         }
       } catch (error) {
@@ -101,10 +101,10 @@ export async function processInParallelWithOptions<T>(
           results.completed + results.failed,
           items.length,
           item,
-          false
+          false,
         );
       }
-    })
+    }),
   );
 
   // Wait for all tasks to complete

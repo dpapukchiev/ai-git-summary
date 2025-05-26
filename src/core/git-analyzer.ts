@@ -38,12 +38,12 @@ export class GitAnalyzer {
     const lastSyncDate = this.db.getLatestCommitDate(repo.id);
     log.debug(
       `Last sync: ${lastSyncDate ? lastSyncDate.toISOString() : "Never"}`,
-      "git-analyzer"
+      "git-analyzer",
     );
 
     const commits = await this.commitFetcher.fetchCommits(
       git,
-      lastSyncDate || undefined
+      lastSyncDate || undefined,
     );
     log.output(`Found ${commits.length} new commits`, "git-analyzer");
 
@@ -53,7 +53,7 @@ export class GitAnalyzer {
 
       log.output(
         `Processing commits with concurrency: ${this.concurrency}`,
-        "git-analyzer"
+        "git-analyzer",
       );
 
       const results = await processInParallel(
@@ -68,7 +68,7 @@ export class GitAnalyzer {
             log.error(
               `Failed to process commit ${commit?.hash}`,
               error as Error,
-              "git-analyzer"
+              "git-analyzer",
             );
             return { success: false, error };
           }
@@ -77,7 +77,7 @@ export class GitAnalyzer {
         (completed, total, commit, success) => {
           processed = completed;
           this.logProgress(completed, total, startTime);
-        }
+        },
       );
 
       const totalTime = (Date.now() - startTime) / 1000;
@@ -85,7 +85,7 @@ export class GitAnalyzer {
         commits.length,
         totalTime,
         results.completed,
-        results.failed
+        results.failed,
       );
     }
 
@@ -95,14 +95,14 @@ export class GitAnalyzer {
   private logProgress(
     processed: number,
     total: number,
-    startTime: number
+    startTime: number,
   ): void {
     if (processed % 10 === 0 || processed === total) {
       const elapsed = (Date.now() - startTime) / 1000;
       const rate = processed / elapsed;
       log.output(
         `✓ Processed ${processed}/${total} commits (${rate.toFixed(1)} commits/sec)`,
-        "git-analyzer"
+        "git-analyzer",
       );
     }
   }
@@ -111,21 +111,21 @@ export class GitAnalyzer {
     totalCommits: number,
     totalTime: number,
     successful: number,
-    failed: number
+    failed: number,
   ): void {
     log.output(
       `🎉 Completed processing ${totalCommits} commits in ${totalTime.toFixed(1)}s`,
-      "git-analyzer"
+      "git-analyzer",
     );
     log.output(
       `✅ Successful: ${successful}, ❌ Failed: ${failed}`,
-      "git-analyzer"
+      "git-analyzer",
     );
 
     if (failed > 0) {
       log.output(
         `⚠️  ${failed} commits failed to process. Check logs above for details.`,
-        "git-analyzer"
+        "git-analyzer",
       );
     }
   }
@@ -143,7 +143,7 @@ export class GitAnalyzer {
   private async getOrCreateRepository(
     git: SimpleGit,
     repoPath: string,
-    repoName?: string
+    repoName?: string,
   ): Promise<Repository & { id: number }> {
     let repo = this.db.getRepository(repoPath);
 
@@ -174,18 +174,18 @@ export class GitAnalyzer {
   async discoverRepositoriesByOrganization(
     searchPaths: string[],
     organizationName: string,
-    maxDepth: number = 3
+    maxDepth: number = 3,
   ): Promise<Repository[]> {
     log.output(
       `🔍 Starting organization discovery for: ${organizationName}`,
-      "git-analyzer"
+      "git-analyzer",
     );
 
     const allRepositories =
       await this.repositoryDiscovery.discoverRepositories(searchPaths);
     return await this.gitRemoteHandler.filterRepositoriesByOrganization(
       allRepositories,
-      organizationName
+      organizationName,
     );
   }
 }

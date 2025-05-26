@@ -7,7 +7,7 @@ export class AchievementGenerator {
   static generate(
     stats: any,
     timePatterns: TimePatterns,
-    repositories: any[]
+    repositories: any[],
   ): string[] {
     const achievements: string[] = [];
 
@@ -40,7 +40,7 @@ export class AchievementGenerator {
       ACHIEVEMENT_THRESHOLDS.WORKING_HOURS_PERCENT
     ) {
       achievements.push(
-        "⏰ Professional Hours - 80%+ commits during work hours!"
+        "⏰ Professional Hours - 80%+ commits during work hours!",
       );
     }
 

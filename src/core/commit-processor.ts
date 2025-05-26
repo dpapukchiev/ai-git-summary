@@ -9,7 +9,7 @@ export class CommitProcessor {
   async processCommit(
     git: SimpleGit,
     repoId: number,
-    logEntry: any
+    logEntry: any,
   ): Promise<void> {
     try {
       const stats = await this.getCommitStats(git, logEntry.hash);
@@ -32,7 +32,7 @@ export class CommitProcessor {
       log.error(
         `Error processing commit ${logEntry.hash}`,
         error as Error,
-        "commit-processor"
+        "commit-processor",
       );
       throw error;
     }
@@ -41,7 +41,7 @@ export class CommitProcessor {
   private validateCommitId(commitId: number, hash: string): void {
     if (!commitId || commitId <= 0) {
       throw new Error(
-        `Failed to add commit ${hash} - invalid commit ID: ${commitId}`
+        `Failed to add commit ${hash} - invalid commit ID: ${commitId}`,
       );
     }
   }
@@ -49,7 +49,7 @@ export class CommitProcessor {
   private async saveFileChanges(
     commitId: number,
     fileChanges: Omit<FileChange, "id" | "commitId">[],
-    hash: string
+    hash: string,
   ): Promise<void> {
     for (const fileChange of fileChanges) {
       try {
@@ -61,7 +61,7 @@ export class CommitProcessor {
         log.error(
           `Error adding file change for commit ${hash}, file ${fileChange.filePath}`,
           fileChangeError as Error,
-          "commit-processor"
+          "commit-processor",
         );
       }
     }
@@ -69,7 +69,7 @@ export class CommitProcessor {
 
   async getCommitStats(
     git: SimpleGit,
-    hash: string
+    hash: string,
   ): Promise<{
     filesChanged: number;
     insertions: number;
@@ -121,7 +121,7 @@ export class CommitProcessor {
   }
 
   private parseDiffNumstat(
-    diffOutput: string
+    diffOutput: string,
   ): Omit<FileChange, "id" | "commitId">[] {
     const lines = diffOutput
       .trim()
@@ -132,12 +132,12 @@ export class CommitProcessor {
       .map((line) => this.parseNumstatLine(line))
       .filter(
         (change): change is Omit<FileChange, "id" | "commitId"> =>
-          change !== null
+          change !== null,
       );
   }
 
   private parseNumstatLine(
-    line: string
+    line: string,
   ): Omit<FileChange, "id" | "commitId"> | null {
     const parts = line.split("\t");
     if (parts.length < 3) return null;
@@ -160,7 +160,7 @@ export class CommitProcessor {
   private determineChangeType(
     insertions: number,
     deletions: number,
-    filePath: string
+    filePath: string,
   ): FileChange["changeType"] {
     if (filePath.includes(" => ")) return "renamed";
     if (insertions > 0 && deletions === 0) return "added";

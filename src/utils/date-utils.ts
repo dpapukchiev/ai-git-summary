@@ -4,7 +4,7 @@ export class DateUtils {
   static getPeriod(
     periodType: PeriodType,
     customStart?: Date,
-    customEnd?: Date
+    customEnd?: Date,
   ): TimePeriod {
     const now = new Date();
     let startDate: Date;
@@ -127,7 +127,7 @@ export class DateUtils {
    * Enhanced time analysis functions for granular patterns
    */
   static getHourlyCommitPattern(
-    commits: Array<{ date: Date }>
+    commits: Array<{ date: Date }>,
   ): Map<number, number> {
     const hourlyCommits = new Map<number, number>();
 

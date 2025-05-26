@@ -13,7 +13,7 @@ export class DiscoverHandler {
 
   async execute(
     searchPaths: string[],
-    options: DiscoverOptions
+    options: DiscoverOptions,
   ): Promise<void> {
     log.output("🔍 Discovering git repositories...", "discover");
 
@@ -24,7 +24,7 @@ export class DiscoverHandler {
     if (repositories.length === 0) {
       log.output(
         "No git repositories found in the specified paths.",
-        "discover"
+        "discover",
       );
       return;
     }
@@ -37,7 +37,7 @@ export class DiscoverHandler {
     const concurrency = parseInt(options.concurrency, 10);
     log.output(
       `\nAnalyzing repositories with concurrency: ${concurrency}...`,
-      "discover"
+      "discover",
     );
 
     const results = await processInParallel(
@@ -55,9 +55,9 @@ export class DiscoverHandler {
         const status = success ? "✅" : "❌";
         log.output(
           `${status} [${completed}/${total}] ${repo.name}`,
-          "discover"
+          "discover",
         );
-      }
+      },
     );
 
     log.output(`\n🎉 Discovery and analysis complete!`, "discover");

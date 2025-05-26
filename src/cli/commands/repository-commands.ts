@@ -16,7 +16,7 @@ import { log } from "../../utils/logger";
 export function addRepositoryCommands(
   program: Command,
   db: DatabaseManager,
-  gitAnalyzer: GitAnalyzer
+  gitAnalyzer: GitAnalyzer,
 ) {
   // Initialize handlers
   const addRepoHandler = new AddRepoHandler(gitAnalyzer);
@@ -49,7 +49,7 @@ export function addRepositoryCommands(
     .option(
       "-c, --concurrency <num>",
       "Number of repositories to process concurrently",
-      "3"
+      "3",
     )
     .action(async (searchPaths: string[], options) => {
       try {
@@ -68,7 +68,7 @@ export function addRepositoryCommands(
     .option(
       "-c, --concurrency <num>",
       "Number of repositories to process concurrently",
-      "3"
+      "3",
     )
     .action(async (options) => {
       try {
@@ -96,22 +96,22 @@ export function addRepositoryCommands(
   program
     .command("add-org")
     .description(
-      "Add all repositories from a specific organization that exist in given directories"
+      "Add all repositories from a specific organization that exist in given directories",
     )
     .argument(
       "<organization>",
-      "Organization name (e.g., 'zenjob', 'microsoft')"
+      "Organization name (e.g., 'zenjob', 'microsoft')",
     )
     .argument("<paths...>", "Directory paths to search for repositories")
     .option("-d, --max-depth <depth>", "Maximum search depth", "3")
     .option(
       "-c, --concurrency <num>",
       "Number of repositories to process concurrently",
-      "3"
+      "3",
     )
     .option(
       "-n, --dry-run",
-      "Show what repositories would be added without actually adding them"
+      "Show what repositories would be added without actually adding them",
     )
     .action(
       async (organizationName: string, searchPaths: string[], options) => {
@@ -121,10 +121,10 @@ export function addRepositoryCommands(
           log.error(
             "Error during organization repository discovery",
             error as Error,
-            "cli"
+            "cli",
           );
           process.exit(1);
         }
-      }
+      },
     );
 }

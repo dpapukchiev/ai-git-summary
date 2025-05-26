@@ -89,7 +89,7 @@ export class DatabaseManager {
       repo.name,
       repo.path,
       repo.remoteUrl || null,
-      repo.weight || 1.0
+      repo.weight || 1.0,
     );
     return result.lastInsertRowid as number;
   }
@@ -108,7 +108,7 @@ export class DatabaseManager {
 
   updateRepositoryLastSynced(repoId: number, date: Date): void {
     const stmt = this.db.prepare(
-      "UPDATE repositories SET last_synced = ? WHERE id = ?"
+      "UPDATE repositories SET last_synced = ? WHERE id = ?",
     );
     stmt.run(date.toISOString(), repoId);
   }
@@ -141,7 +141,7 @@ export class DatabaseManager {
       commit.filesChanged,
       commit.insertions,
       commit.deletions,
-      commit.branch || null
+      commit.branch || null,
     );
     return result.lastInsertRowid as number;
   }
@@ -149,7 +149,7 @@ export class DatabaseManager {
   getCommitsByRepository(
     repoId: number,
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
   ): Commit[] {
     let query = "SELECT * FROM commits WHERE repo_id = ?";
     const params: any[] = [repoId];
@@ -175,7 +175,7 @@ export class DatabaseManager {
     startDate: Date,
     endDate: Date,
     repoIds?: number[],
-    author?: string
+    author?: string,
   ): Commit[] {
     let query = "SELECT * FROM commits WHERE date >= ? AND date <= ?";
     const params: any[] = [startDate.toISOString(), endDate.toISOString()];
@@ -199,7 +199,7 @@ export class DatabaseManager {
 
   getLatestCommitDate(repoId: number): Date | null {
     const stmt = this.db.prepare(
-      "SELECT MAX(date) as latest_date FROM commits WHERE repo_id = ?"
+      "SELECT MAX(date) as latest_date FROM commits WHERE repo_id = ?",
     );
     const result = stmt.get(repoId) as any;
     return result?.latest_date ? new Date(result.latest_date) : null;
@@ -216,14 +216,14 @@ export class DatabaseManager {
       fileChange.filePath,
       fileChange.changeType,
       fileChange.insertions,
-      fileChange.deletions
+      fileChange.deletions,
     );
     return result.lastInsertRowid as number;
   }
 
   getFileChangesByCommit(commitId: number): FileChange[] {
     const stmt = this.db.prepare(
-      "SELECT * FROM file_changes WHERE commit_id = ?"
+      "SELECT * FROM file_changes WHERE commit_id = ?",
     );
     const rows = stmt.all(commitId) as any[];
     return rows.map(this.mapFileChange);
@@ -232,7 +232,7 @@ export class DatabaseManager {
   getFileChangesByDateRange(
     startDate: Date,
     endDate: Date,
-    repoIds?: number[]
+    repoIds?: number[],
   ): FileChange[] {
     let query = `
       SELECT fc.* FROM file_changes fc
@@ -257,7 +257,7 @@ export class DatabaseManager {
   getCachedSummary(
     periodType: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): CachedSummary | null {
     const stmt = this.db.prepare(`
       SELECT * FROM cached_summaries 
@@ -268,7 +268,7 @@ export class DatabaseManager {
     const row = stmt.get(
       periodType,
       startDate.toISOString().split("T")[0],
-      endDate.toISOString().split("T")[0]
+      endDate.toISOString().split("T")[0],
     ) as any;
     return row ? this.mapCachedSummary(row) : null;
   }
@@ -282,7 +282,7 @@ export class DatabaseManager {
       summary.periodType,
       summary.startDate.toISOString().split("T")[0],
       summary.endDate.toISOString().split("T")[0],
-      summary.content
+      summary.content,
     );
     return result.lastInsertRowid as number;
   }

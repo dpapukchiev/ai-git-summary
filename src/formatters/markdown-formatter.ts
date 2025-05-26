@@ -1,30 +1,6 @@
 import { DateUtils } from "../utils/date-utils";
 import { log } from "../utils/logger";
-import { TimePatternCalculator } from "./calculators";
-
-/**
- * Helper function to find most productive day
- */
-function getMostProductiveDay(commits: any[]): string {
-  if (!commits || commits.length === 0) return "N/A";
-
-  const dayCommits = new Map<string, number>();
-  commits.forEach((commit) => {
-    const day = DateUtils.formatDate(commit.date);
-    dayCommits.set(day, (dayCommits.get(day) || 0) + 1);
-  });
-
-  let maxDay = "";
-  let maxCommits = 0;
-  for (const [day, count] of dayCommits) {
-    if (count > maxCommits) {
-      maxCommits = count;
-      maxDay = day;
-    }
-  }
-
-  return `${maxDay} (${maxCommits} commits)`;
-}
+import { TimePatternCalculator, getMostProductiveDay } from "./calculators";
 
 /**
  * Print markdown-formatted summary to console
@@ -32,63 +8,63 @@ function getMostProductiveDay(commits: any[]): string {
 export function printMarkdownSummary(summary: any) {
   log.output(
     `# 📊 Work Summary: ${summary.period.label}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `**Period:** ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `**Repositories:** ${summary.repositories.length}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   log.output("## 📈 Overall Statistics\n", "markdown-formatter");
   log.output(
     `- **Total Commits:** ${summary.stats.totalCommits.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Files Changed:** ${summary.stats.totalFilesChanged.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Lines Added:** +${summary.stats.totalInsertions.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Lines Deleted:** -${summary.stats.totalDeletions.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   const netChange =
     summary.stats.totalInsertions - summary.stats.totalDeletions;
   log.output(
     `- **Net Change:** ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Active Days:** ${summary.stats.activeDays}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Average Commits/Day:** ${summary.stats.averageCommitsPerDay}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   const linesPerCommit =
     summary.stats.totalCommits > 0
       ? Math.round(
           (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-            summary.stats.totalCommits
+            summary.stats.totalCommits,
         )
       : 0;
   log.output(
     `- **Lines Changed/Commit:** ${linesPerCommit.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Commits/Active Day:** ${summary.stats.activeDays > 0 ? (summary.stats.totalCommits / summary.stats.activeDays).toFixed(1) : "0"}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   // Time patterns with enhanced analysis
@@ -100,36 +76,36 @@ export function printMarkdownSummary(summary: any) {
     // Overview
     log.output(
       `- **📊 Total Activity:** ${timePatterns.totalCommits} commits analyzed`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **🏢 Working Hours (9AM-6PM):** ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **📅 Weekend Activity:** ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
 
     // Peak activity and patterns
     if (timePatterns.peakHour.commits > 0) {
       log.output(
         `- **🎯 Peak Hour:** ${timePatterns.peakHour.label} (${timePatterns.peakHour.commits} commits)`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
 
     if (timePatterns.earlyBird.commits > 0) {
       log.output(
         `- **🌅 Early Bird:** ${timePatterns.earlyBird.commits} commits (${timePatterns.earlyBird.percentage}%) between 6-9AM`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
 
     if (timePatterns.nightOwl.commits > 0) {
       log.output(
         `- **🦉 Night Owl:** ${timePatterns.nightOwl.commits} commits (${timePatterns.nightOwl.percentage}%) between 9PM-2AM`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
 
@@ -140,7 +116,7 @@ export function printMarkdownSummary(summary: any) {
       log.output("### 📋 Activity by Time Period\n", "markdown-formatter");
       log.output(
         "| Period | Time Range | Commits | Percentage | Type |\n|--------|------------|---------|------------|------|",
-        "markdown-formatter"
+        "markdown-formatter",
       );
 
       for (const period of timePatterns.timePeriods) {
@@ -151,7 +127,7 @@ export function printMarkdownSummary(summary: any) {
 
           log.output(
             `| ${period.name} | ${period.timeRange} | ${period.commits} | ${period.percentage}% ${bar} | ${typeIcon} |`,
-            "markdown-formatter"
+            "markdown-formatter",
           );
         }
       }
@@ -174,7 +150,7 @@ export function printMarkdownSummary(summary: any) {
 
       for (const block of timeBlocks) {
         const blockHours = block.hours.map((h) =>
-          timePatterns.hourlyPattern.find((p) => p.hour === h)
+          timePatterns.hourlyPattern.find((p) => p.hour === h),
         );
 
         if (blockHours.some((h) => h && h.commits > 0)) {
@@ -183,7 +159,7 @@ export function printMarkdownSummary(summary: any) {
             .join("");
           const commitCounts = blockHours
             .map((h) =>
-              h && h.commits > 0 ? h.commits.toString().padStart(4) : "   ·"
+              h && h.commits > 0 ? h.commits.toString().padStart(4) : "   ·",
             )
             .join("");
 
@@ -199,52 +175,52 @@ export function printMarkdownSummary(summary: any) {
   // Commit size analysis
   if (summary.commits && summary.commits.length > 0) {
     const commitSizes = summary.commits.map(
-      (c: any) => c.insertions + c.deletions
+      (c: any) => c.insertions + c.deletions,
     );
     commitSizes.sort((a: number, b: number) => a - b);
     const median = commitSizes[Math.floor(commitSizes.length / 2)] || 0;
     const smallCommits = commitSizes.filter(
-      (size: number) => size <= 50
+      (size: number) => size <= 50,
     ).length;
     const mediumCommits = commitSizes.filter(
-      (size: number) => size > 50 && size <= 200
+      (size: number) => size > 50 && size <= 200,
     ).length;
     const largeCommits = commitSizes.filter(
-      (size: number) => size > 200
+      (size: number) => size > 200,
     ).length;
 
     log.output("## 📏 Commit Size Distribution\n", "markdown-formatter");
     log.output(`- **Median Lines Changed:** ${median}`, "markdown-formatter");
     log.output(
       `- **Small Commits (≤50 lines):** ${smallCommits} (${Math.round((smallCommits / summary.commits.length) * 100)}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Medium Commits (51-200 lines):** ${mediumCommits} (${Math.round((mediumCommits / summary.commits.length) * 100)}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Large Commits (>200 lines):** ${largeCommits} (${Math.round((largeCommits / summary.commits.length) * 100)}%)\n`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
   }
 
   if (summary.stats.topLanguages && summary.stats.topLanguages.length > 0) {
     const totalChanges = summary.stats.topLanguages.reduce(
       (sum: number, lang: any) => sum + lang.changes,
-      0
+      0,
     );
     log.output("## 💻 Programming Languages\n", "markdown-formatter");
     log.output(
       "| Language | Changes | Percentage |\n|----------|---------|------------|",
-      "markdown-formatter"
+      "markdown-formatter",
     );
     for (const lang of summary.stats.topLanguages.slice(0, 10)) {
       const percentage =
         totalChanges > 0 ? Math.round((lang.changes / totalChanges) * 100) : 0;
       log.output(
         `| ${lang.language} | ${lang.changes.toLocaleString()} | ${percentage}% |`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
     log.output("", "markdown-formatter");
@@ -255,19 +231,19 @@ export function printMarkdownSummary(summary: any) {
     log.output("## 🔥 Activity Insights\n", "markdown-formatter");
     log.output(
       `- **Most Productive Day:** ${getMostProductiveDay(summary.commits)}`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     const consistencyScore = Math.round(
       (summary.stats.activeDays /
         DateUtils.getDaysInPeriod(
           summary.period.startDate,
-          summary.period.endDate
+          summary.period.endDate,
         )) *
-        100
+        100,
     );
     log.output(
       `- **Consistency Score:** ${consistencyScore}% (active days vs. total period)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output("", "markdown-formatter");
   }
@@ -285,7 +261,7 @@ export function printMarkdownSummary(summary: any) {
               .filter((c: any) => c.repoId === repo.id)
               .reduce(
                 (sum: number, c: any) => sum + c.insertions + c.deletions,
-                0
+                0,
               )
           : 0;
 
@@ -307,7 +283,7 @@ export function printMarkdownSummary(summary: any) {
         log.output(`- **Commits:** ${repo.commits}`, "markdown-formatter");
         log.output(
           `- **Lines Changed:** ${repo.linesChanged.toLocaleString()}`,
-          "markdown-formatter"
+          "markdown-formatter",
         );
         if (repo.remoteUrl) {
           log.output(`- **Remote:** ${repo.remoteUrl}`, "markdown-formatter");
@@ -323,7 +299,7 @@ export function printMarkdownSummary(summary: any) {
     for (const file of summary.stats.topFiles.slice(0, 15)) {
       log.output(
         `| \`${file.file}\` | ${file.changes} |`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
     log.output("", "markdown-formatter");
@@ -352,12 +328,12 @@ export function printMarkdownSummary(summary: any) {
 
   if (achievements.length > 0) {
     achievements.forEach((achievement) =>
-      log.output(`- ${achievement}`, "markdown-formatter")
+      log.output(`- ${achievement}`, "markdown-formatter"),
     );
   } else {
     log.output(
       "- Keep coding to unlock achievements! 💪",
-      "markdown-formatter"
+      "markdown-formatter",
     );
   }
   log.output("", "markdown-formatter");

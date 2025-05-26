@@ -5,9 +5,16 @@ import { execSync } from "child_process";
  */
 export class GitUtils {
   /**
+   * Get the current git user's name or email (whichever is available)
+   */
+  static getCurrentUser(): string | null {
+    return this.getCurrentUserName() || this.getCurrentUserEmail();
+  }
+
+  /**
    * Get the current git user name from git config
    */
-  static getCurrentUserName(): string | null {
+  private static getCurrentUserName(): string | null {
     try {
       const userName = execSync("git config user.name", {
         encoding: "utf8",
@@ -21,7 +28,7 @@ export class GitUtils {
   /**
    * Get the current git user email from git config
    */
-  static getCurrentUserEmail(): string | null {
+  private static getCurrentUserEmail(): string | null {
     try {
       const userEmail = execSync("git config user.email", {
         encoding: "utf8",
@@ -30,23 +37,6 @@ export class GitUtils {
     } catch (error) {
       return null;
     }
-  }
-
-  /**
-   * Get the current git user's name or email (whichever is available)
-   */
-  static getCurrentUser(): string | null {
-    return this.getCurrentUserName() || this.getCurrentUserEmail();
-  }
-
-  /**
-   * Check if an author string matches the current git user
-   */
-  static isCurrentUser(author: string): boolean {
-    const userName = this.getCurrentUserName();
-    const userEmail = this.getCurrentUserEmail();
-
-    return author === userName || author === userEmail;
   }
 }
 
@@ -134,7 +124,7 @@ function getGitProvider(hostname: string): GitRemoteInfo["provider"] {
  */
 export function organizationMatches(
   orgName1: string,
-  orgName2: string
+  orgName2: string,
 ): boolean {
   return orgName1.toLowerCase() === orgName2.toLowerCase();
 }

@@ -12,7 +12,7 @@ export class CommitFetcher {
 
       log.debug(
         `Fetching commits from branches: ${Array.from(branchesToCheck).join(", ")}`,
-        "commit-fetcher"
+        "commit-fetcher",
       );
 
       return await this.fetchCommitsFromBranches(git, branchesToCheck, since);
@@ -49,7 +49,7 @@ export class CommitFetcher {
 
   private addRemoteCommonBranches(
     branchesToCheck: Set<string>,
-    branches: any
+    branches: any,
   ): void {
     for (const branch of CommitFetcher.COMMON_BRANCHES) {
       const remoteBranch = `origin/${branch}`;
@@ -61,14 +61,14 @@ export class CommitFetcher {
 
   private addFallbackBranches(
     branchesToCheck: Set<string>,
-    branches: any
+    branches: any,
   ): void {
     if (branchesToCheck.size === 0) {
       if (branches.current) {
         branchesToCheck.add(branches.current);
       } else {
         const localBranches = branches.all.filter(
-          (b: string) => !b.startsWith("remotes/")
+          (b: string) => !b.startsWith("remotes/"),
         );
         localBranches
           .slice(0, 3)
@@ -80,7 +80,7 @@ export class CommitFetcher {
   private async fetchCommitsFromBranches(
     git: SimpleGit,
     branchesToCheck: Set<string>,
-    since?: Date
+    since?: Date,
   ): Promise<LogResult["all"]> {
     const allCommits: any[] = [];
     const seenHashes = new Set<string>();
@@ -90,13 +90,13 @@ export class CommitFetcher {
         const commits = await this.fetchCommitsFromSingleBranch(
           git,
           branch,
-          since
+          since,
         );
         this.deduplicateAndAdd(commits, allCommits, seenHashes);
       } catch (error) {
         log.warn(
           `Could not fetch commits from branch ${branch}`,
-          "commit-fetcher"
+          "commit-fetcher",
         );
         log.debug(`Branch fetch error: ${error}`, "commit-fetcher");
       }
@@ -108,7 +108,7 @@ export class CommitFetcher {
   private async fetchCommitsFromSingleBranch(
     git: SimpleGit,
     branch: string,
-    since?: Date
+    since?: Date,
   ): Promise<any[]> {
     const logArgs = this.buildLogArgs(since, branch);
     const options = this.buildLogOptions();
@@ -149,7 +149,7 @@ export class CommitFetcher {
   private deduplicateAndAdd(
     commits: any[],
     allCommits: any[],
-    seenHashes: Set<string>
+    seenHashes: Set<string>,
   ): void {
     for (const commit of commits) {
       if (!seenHashes.has(commit.hash)) {
@@ -161,7 +161,7 @@ export class CommitFetcher {
 
   private async fallbackCommitFetch(
     git: SimpleGit,
-    since?: Date
+    since?: Date,
   ): Promise<LogResult["all"]> {
     try {
       const logArgs = this.buildLogArgs(since);
@@ -173,7 +173,7 @@ export class CommitFetcher {
       log.error(
         "Fallback commit fetch also failed",
         fallbackError as Error,
-        "commit-fetcher"
+        "commit-fetcher",
       );
       return [];
     }

@@ -696,7 +696,7 @@ export class LanguageDetector {
   /**
    * Detect language from file path
    */
-  static detectFromPath(filePath: string): string {
+  private static detectFromPath(filePath: string): string {
     this.initialize();
 
     if (!filePath) return "Other";
@@ -745,18 +745,10 @@ export class LanguageDetector {
   }
 
   /**
-   * Get all supported languages
-   */
-  static getSupportedLanguages(): string[] {
-    this.initialize();
-    return Array.from(new Set(this.extensionMap.values())).sort();
-  }
-
-  /**
    * Get language statistics from file paths with change counts
    */
   static calculateLanguageStats(
-    fileChanges: Array<{ filePath: string; changes: number }>
+    fileChanges: Array<{ filePath: string; changes: number }>,
   ): Map<string, number> {
     const languageStats = new Map<string, number>();
 
@@ -775,7 +767,7 @@ export class LanguageDetector {
   static filterAndSortLanguages(
     languageStats: Map<string, number>,
     maxResults: number = 10,
-    otherThreshold: number = 0.1 // 10% threshold
+    otherThreshold: number = 0.1, // 10% threshold
   ): Array<{ language: string; changes: number }> {
     const sortedLanguages = Array.from(languageStats.entries())
       .map(([language, changes]) => ({ language, changes }))
@@ -783,10 +775,10 @@ export class LanguageDetector {
 
     const totalChanges = sortedLanguages.reduce(
       (sum, lang) => sum + lang.changes,
-      0
+      0,
     );
     const otherEntry = sortedLanguages.find(
-      (lang) => lang.language === "Other"
+      (lang) => lang.language === "Other",
     );
 
     // If "Other" exists but represents less than threshold of total changes, filter it out
@@ -794,7 +786,7 @@ export class LanguageDetector {
       const otherPercentage = otherEntry.changes / totalChanges;
       if (otherPercentage < otherThreshold) {
         const filtered = sortedLanguages.filter(
-          (lang) => lang.language !== "Other"
+          (lang) => lang.language !== "Other",
         );
         if (filtered.length >= 3) {
           return filtered.slice(0, maxResults);
@@ -811,7 +803,7 @@ export class LanguageDetector {
    */
   static analyzeOtherFiles(
     fileChanges: Array<{ filePath: string; changes: number }>,
-    maxSamples: number = 20
+    maxSamples: number = 20,
   ): {
     otherFiles: Array<{ filePath: string; changes: number }>;
     totalOtherChanges: number;

@@ -31,8 +31,8 @@ const consoleFormat = winston.format.combine(
       }
 
       return logMessage;
-    }
-  )
+    },
+  ),
 );
 
 // Create winston logger instance
@@ -41,7 +41,7 @@ const logger = winston.createLogger({
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
-    winston.format.json()
+    winston.format.json(),
   ),
   defaultMeta: { service: "ai-git-summary" },
   transports: [
@@ -57,7 +57,7 @@ const logger = winston.createLogger({
       level: "error",
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
+        winston.format.json(),
       ),
     }),
 
@@ -66,7 +66,7 @@ const logger = winston.createLogger({
       filename: "logs/combined.log",
       format: winston.format.combine(
         winston.format.timestamp(),
-        winston.format.json()
+        winston.format.json(),
       ),
     }),
   ],

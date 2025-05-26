@@ -11,7 +11,7 @@ export interface SyncOptions {
 export class SyncHandler {
   constructor(
     private db: DatabaseManager,
-    private gitAnalyzer: GitAnalyzer
+    private gitAnalyzer: GitAnalyzer,
   ) {}
 
   async execute(options: SyncOptions): Promise<void> {
@@ -23,8 +23,8 @@ export class SyncHandler {
     if (options.repos && options.repos.length > 0) {
       reposToSync = repositories.filter((repo) =>
         options.repos!.some(
-          (r: string) => repo.path.includes(r) || repo.name === r
-        )
+          (r: string) => repo.path.includes(r) || repo.name === r,
+        ),
       );
     }
 
@@ -36,7 +36,7 @@ export class SyncHandler {
     const concurrency = parseInt(options.concurrency, 10);
     log.output(
       `\nSyncing ${reposToSync.length} repositories with concurrency: ${concurrency}...`,
-      "sync"
+      "sync",
     );
 
     const results = await processInParallel(
@@ -53,7 +53,7 @@ export class SyncHandler {
       (completed, total, repo, success) => {
         const status = success ? "✅" : "❌";
         log.output(`${status} [${completed}/${total}] ${repo.name}`, "sync");
-      }
+      },
     );
 
     log.output(`\n🎉 Sync complete!`, "sync");

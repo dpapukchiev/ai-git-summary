@@ -12,7 +12,7 @@ export class ListHandler {
       log.output("No repositories are currently tracked.", "list");
       log.output(
         'Use "git-summary add-repo <path>" to add repositories.',
-        "list"
+        "list",
       );
       return;
     }
@@ -28,7 +28,7 @@ export class ListHandler {
       if (repo.lastSynced) {
         log.output(
           `   Last Synced: ${DateUtils.formatDateTime(repo.lastSynced)}`,
-          "list"
+          "list",
         );
       }
       log.output("", "list");

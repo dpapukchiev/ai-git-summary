@@ -12,7 +12,7 @@ export type OutputFormat = "text" | "json" | "markdown";
 export function formatSummary(
   summary: any,
   format: OutputFormat,
-  verbose: boolean = false
+  verbose: boolean = false,
 ) {
   switch (format) {
     case "json":
