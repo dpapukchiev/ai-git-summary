@@ -75,4 +75,5 @@ export type PeriodType =
   | "6months"
   | "9months"
   | "1year"
-  | "ytd";
+  | "ytd"
+  | "custom";

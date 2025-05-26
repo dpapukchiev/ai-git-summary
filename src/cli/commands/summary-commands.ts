@@ -18,8 +18,6 @@ export function addSummaryCommands(
   const summaryPeriods: Array<{ period: PeriodType; description: string }> = [
     { period: "1week", description: "Last week summary" },
     { period: "1month", description: "Last month summary" },
-    { period: "3months", description: "Last 3 months summary" },
-    { period: "6months", description: "Last 6 months summary" },
     { period: "1year", description: "Last year summary" },
     { period: "ytd", description: "Year to date summary" },
   ];
@@ -82,6 +80,78 @@ export function addSummaryCommands(
         }
       });
   }
+
+  // Special months command that accepts a numeric argument
+  program
+    .command("months")
+    .description("Generate summary for specified number of months")
+    .argument("[count]", "Number of months (default: 3)", "3")
+    .option("-r, --repos <repos...>", "Specific repositories to analyze")
+    .option(
+      "-f, --format <format>",
+      "Output format (text, json, markdown)",
+      "text"
+    )
+    .option("-a, --author <author>", "Filter commits by author name or email")
+    .option("--me", "Filter commits by current git user")
+    .option("-v, --verbose", "Verbose output")
+    .action(async (count: string, options) => {
+      try {
+        const monthCount = parseInt(count, 10);
+        if (isNaN(monthCount) || monthCount <= 0) {
+          log.error(
+            "Invalid month count. Please provide a positive number.",
+            undefined,
+            "cli"
+          );
+          process.exit(1);
+        }
+
+        const description = `Last ${monthCount} month${monthCount === 1 ? "" : "s"} summary`;
+
+        if (options.verbose) {
+          log.info(`📊 Generating ${description.toLowerCase()}...`, "cli");
+        }
+
+        // Handle author filtering
+        let author = options.author;
+        if (options.me) {
+          const currentUser = GitUtils.getCurrentUser();
+          if (!currentUser) {
+            log.error(
+              "Could not determine current git user. Please set git config user.name or user.email",
+              undefined,
+              "cli"
+            );
+            process.exit(1);
+          }
+          author = currentUser;
+          if (options.verbose) {
+            log.info(`🔍 Filtering commits by current user: ${author}`, "cli");
+          }
+        }
+
+        // Create custom time period for the specified number of months
+        const now = new Date();
+        const startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - monthCount);
+
+        const timePeriod = DateUtils.getPeriod("custom", startDate, now);
+        // Override the label to reflect the actual period
+        timePeriod.label = `Last ${monthCount} Month${monthCount === 1 ? "" : "s"}`;
+
+        const summary = await dataAggregator.generateWorkSummary(
+          timePeriod,
+          options.repos,
+          author
+        );
+
+        formatSummary(summary, options.format as OutputFormat, options.verbose);
+      } catch (error) {
+        log.error("Error generating summary", error as Error, "cli");
+        process.exit(1);
+      }
+    });
 
   // Custom period command
   program
