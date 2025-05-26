@@ -229,6 +229,30 @@ export class DatabaseManager {
     return rows.map(this.mapFileChange);
   }
 
+  getFileChangesByDateRange(
+    startDate: Date,
+    endDate: Date,
+    repoIds?: number[]
+  ): FileChange[] {
+    let query = `
+      SELECT fc.* FROM file_changes fc
+      INNER JOIN commits c ON fc.commit_id = c.id
+      WHERE c.date >= ? AND c.date <= ?
+    `;
+    const params: any[] = [startDate.toISOString(), endDate.toISOString()];
+
+    if (repoIds && repoIds.length > 0) {
+      query += ` AND c.repo_id IN (${repoIds.map(() => "?").join(",")})`;
+      params.push(...repoIds);
+    }
+
+    query += " ORDER BY c.date DESC";
+
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(...params) as any[];
+    return rows.map(this.mapFileChange);
+  }
+
   // Summary cache operations
   getCachedSummary(
     periodType: string,

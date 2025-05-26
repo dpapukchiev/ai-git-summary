@@ -1,32 +1,9 @@
 import { DatabaseManager } from "../storage/database";
 import { Commit, WorkSummary, TimePeriod } from "../types";
 import { DateUtils } from "../utils/date-utils";
+import { LanguageDetector } from "../utils/language-detector";
 
 // Constants for better maintainability
-const FILE_EXTENSION_PATTERNS = {
-  TypeScript: /\.ts|typescript/gi,
-  JavaScript: /\.js|javascript/gi,
-  Python: /\.py|python/gi,
-  "Java/Kotlin": /\.java|\.kt|kotlin/gi,
-  Go: /\.go|golang/gi,
-  Rust: /\.rs|rust/gi,
-  "C++": /\.cpp|\.c\+\+|\.cc|\.cxx/gi,
-  C: /\.c(?!\+)|\.h(?!pp)/gi,
-  "C#": /\.cs|c#/gi,
-  Ruby: /\.rb|ruby/gi,
-  PHP: /\.php/gi,
-  Swift: /\.swift/gi,
-  HTML: /\.html|\.htm/gi,
-  CSS: /\.css|\.scss|\.sass/gi,
-  JSON: /\.json/gi,
-  XML: /\.xml/gi,
-  Markdown: /\.md|markdown/gi,
-  SQL: /\.sql/gi,
-  Shell: /\.sh|bash|shell/gi,
-  YAML: /\.yml|\.yaml/gi,
-  Docker: /dockerfile/gi,
-} as const;
-
 const FILE_FILTERING_RULES = {
   MIN_LENGTH: 3,
   MAX_LENGTH: 100,
@@ -36,38 +13,76 @@ const FILE_FILTERING_RULES = {
 
 // Single Responsibility: Language detection and statistics
 class LanguageStatsCalculator {
-  private languageStats = new Map<string, number>();
+  constructor(private db: DatabaseManager) {}
 
-  calculateFromCommits(commits: Commit[]): Map<string, number> {
-    this.languageStats.clear();
-
-    for (const commit of commits) {
-      this.processCommitForLanguages(commit);
+  calculateFromCommits(
+    commits: Commit[],
+    repositoryIds: number[]
+  ): Map<string, number> {
+    // Get file changes for the period covered by these commits
+    if (commits.length === 0) {
+      return new Map();
     }
 
-    return new Map(this.languageStats);
-  }
+    const dates = commits.map((c) => c.date);
+    const startDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+    const endDate = new Date(Math.max(...dates.map((d) => d.getTime())));
 
-  private processCommitForLanguages(commit: Commit): void {
-    const message = commit.message.toLowerCase();
-    const language = this.detectLanguageFromMessage(message);
-    const changeCount = commit.insertions + commit.deletions;
+    // Get all file changes for this period and repositories
+    const fileChanges = this.db.getFileChangesByDateRange(
+      startDate,
+      endDate,
+      repositoryIds.length > 0 ? repositoryIds : undefined
+    );
 
-    this.incrementLanguageStats(language, changeCount);
-  }
-
-  private detectLanguageFromMessage(message: string): string {
-    for (const [language, pattern] of Object.entries(FILE_EXTENSION_PATTERNS)) {
-      if (pattern.test(message)) {
-        return language;
-      }
+    // Aggregate changes by file path
+    const filePathStats = new Map<string, number>();
+    for (const change of fileChanges) {
+      const currentCount = filePathStats.get(change.filePath) || 0;
+      const changeAmount = change.insertions + change.deletions;
+      filePathStats.set(change.filePath, currentCount + changeAmount);
     }
-    return "Other";
+
+    // Convert to language statistics using the enhanced detector
+    const filePathArray = Array.from(filePathStats.entries()).map(
+      ([filePath, changes]) => ({ filePath, changes })
+    );
+
+    return LanguageDetector.calculateLanguageStats(filePathArray);
   }
 
-  private incrementLanguageStats(language: string, changeCount: number): void {
-    const currentCount = this.languageStats.get(language) || 0;
-    this.languageStats.set(language, currentCount + changeCount);
+  /**
+   * Get detailed breakdown of file changes for debugging purposes
+   */
+  getFilePathBreakdown(
+    commits: Commit[],
+    repositoryIds: number[]
+  ): Array<{ filePath: string; changes: number }> {
+    if (commits.length === 0) {
+      return [];
+    }
+
+    const dates = commits.map((c) => c.date);
+    const startDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+    const endDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+
+    const fileChanges = this.db.getFileChangesByDateRange(
+      startDate,
+      endDate,
+      repositoryIds.length > 0 ? repositoryIds : undefined
+    );
+
+    const filePathStats = new Map<string, number>();
+    for (const change of fileChanges) {
+      const currentCount = filePathStats.get(change.filePath) || 0;
+      const changeAmount = change.insertions + change.deletions;
+      filePathStats.set(change.filePath, currentCount + changeAmount);
+    }
+
+    return Array.from(filePathStats.entries()).map(([filePath, changes]) => ({
+      filePath,
+      changes,
+    }));
   }
 }
 
@@ -169,12 +184,34 @@ class RepositoryFilter {
 
 // Single Responsibility: Statistics calculation
 class CommitStatsCalculator {
-  calculateStats(commits: Commit[], period: TimePeriod) {
+  constructor(private db: DatabaseManager) {}
+
+  calculateStats(
+    commits: Commit[],
+    period: TimePeriod,
+    repositoryIds: number[],
+    includeDebugInfo: boolean = false
+  ) {
     const basicStats = this.calculateBasicStats(commits);
     const timeStats = this.calculateTimeStats(commits, period);
-    const languageStats = new LanguageStatsCalculator().calculateFromCommits(
-      commits
+    const languageCalculator = new LanguageStatsCalculator(this.db);
+    const languageStats = languageCalculator.calculateFromCommits(
+      commits,
+      repositoryIds
     );
+
+    let debugInfo = {};
+    if (includeDebugInfo) {
+      const filePathBreakdown = languageCalculator.getFilePathBreakdown(
+        commits,
+        repositoryIds
+      );
+      debugInfo = {
+        otherFilesAnalysis:
+          LanguageDetector.analyzeOtherFiles(filePathBreakdown),
+      };
+    }
+
     const fileStats = new FileStatsCalculator().calculateFromCommits(commits);
 
     return {
@@ -182,6 +219,7 @@ class CommitStatsCalculator {
       ...timeStats,
       topLanguages: this.formatTopLanguages(languageStats, 10),
       topFiles: this.formatTopFiles(fileStats, 20),
+      ...debugInfo,
     };
   }
 
@@ -213,10 +251,7 @@ class CommitStatsCalculator {
     languageStats: Map<string, number>,
     limit: number
   ) {
-    return Array.from(languageStats.entries())
-      .map(([language, changes]) => ({ language, changes }))
-      .sort((a, b) => b.changes - a.changes)
-      .slice(0, limit);
+    return LanguageDetector.filterAndSortLanguages(languageStats, limit);
   }
 
   private formatTopFiles(fileStats: Map<string, number>, limit: number) {
@@ -234,17 +269,25 @@ export class DataAggregator {
 
   constructor(private db: DatabaseManager) {
     this.repositoryFilter = new RepositoryFilter(db);
-    this.statsCalculator = new CommitStatsCalculator();
+    this.statsCalculator = new CommitStatsCalculator(db);
   }
 
   async generateWorkSummary(
     period: TimePeriod,
     repositoryPaths?: string[],
-    author?: string
+    author?: string,
+    verbose: boolean = false
   ): Promise<WorkSummary> {
     const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
     const commits = this.getCommitsForPeriod(period, repositories, author);
-    const stats = this.statsCalculator.calculateStats(commits, period);
+    const repositoryIds =
+      this.repositoryFilter.extractRepositoryIds(repositories);
+    const stats = this.statsCalculator.calculateStats(
+      commits,
+      period,
+      repositoryIds,
+      verbose
+    );
 
     return {
       period,

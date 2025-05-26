@@ -68,7 +68,8 @@ export function addSummaryCommands(
           const summary = await dataAggregator.generateWorkSummary(
             timePeriod,
             options.repos,
-            author
+            author,
+            options.verbose
           );
 
           formatSummary(
@@ -146,7 +147,8 @@ export function addSummaryCommands(
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
           options.repos,
-          author
+          author,
+          options.verbose
         );
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);
@@ -229,7 +231,8 @@ export function addSummaryCommands(
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
           [options.repo],
-          author
+          author,
+          options.verbose
         );
 
         // Format and display the detailed repository analysis

@@ -118,7 +118,11 @@ class SummaryFormatter {
     );
   }
 
-  static formatTopLanguages(topLanguages: any[]): void {
+  static formatTopLanguages(
+    topLanguages: any[],
+    verbose: boolean = false,
+    otherFilesAnalysis?: any
+  ): void {
     if (!topLanguages || topLanguages.length === 0) return;
 
     const totalChanges = topLanguages.reduce(
@@ -127,7 +131,17 @@ class SummaryFormatter {
     );
     log.output("💻 Top Languages:", this.CONTEXT);
 
-    for (const lang of topLanguages.slice(0, DISPLAY_LIMITS.TOP_LANGUAGES)) {
+    // Show more languages if we have good detection (less "Other" dominance)
+    const otherLanguage = topLanguages.find(
+      (lang) => lang.language === "Other"
+    );
+    const hasOtherDominance =
+      otherLanguage && otherLanguage.changes / totalChanges > 0.5;
+    const displayLimit = hasOtherDominance
+      ? DISPLAY_LIMITS.TOP_LANGUAGES
+      : Math.min(12, topLanguages.length);
+
+    for (const lang of topLanguages.slice(0, displayLimit)) {
       const percentage =
         totalChanges > 0 ? Math.round((lang.changes / totalChanges) * 100) : 0;
       const bar = "█".repeat(Math.max(1, Math.round(percentage / 5)));
@@ -136,6 +150,62 @@ class SummaryFormatter {
         this.CONTEXT
       );
     }
+
+    // Show helpful tip about "Other" category if it's significant
+    if (otherLanguage && otherLanguage.changes / totalChanges > 0.3) {
+      log.output("", this.CONTEXT);
+      log.output(
+        "💡 Large 'Other' category detected. This usually includes:",
+        this.CONTEXT
+      );
+      log.output(
+        "   • Binary files (images, archives, executables)",
+        this.CONTEXT
+      );
+      log.output(
+        "   • Generated files (build artifacts, dependencies)",
+        this.CONTEXT
+      );
+      log.output(
+        "   • Files without extensions or with uncommon extensions",
+        this.CONTEXT
+      );
+
+      if (!verbose) {
+        log.output(
+          "   • Use --verbose flag for detailed breakdown",
+          this.CONTEXT
+        );
+      } else if (otherFilesAnalysis) {
+        log.output("", this.CONTEXT);
+        log.output("🔍 'Other' Files Analysis:", this.CONTEXT);
+
+        if (otherFilesAnalysis.commonExtensions?.length > 0) {
+          log.output(
+            "   📋 Most common unrecognized extensions:",
+            this.CONTEXT
+          );
+          for (const ext of otherFilesAnalysis.commonExtensions.slice(0, 5)) {
+            log.output(
+              `      ${ext.extension}: ${ext.count} files`,
+              this.CONTEXT
+            );
+          }
+        }
+
+        if (otherFilesAnalysis.otherFiles?.length > 0) {
+          log.output("   📄 Top 'Other' files by changes:", this.CONTEXT);
+          for (const file of otherFilesAnalysis.otherFiles.slice(0, 8)) {
+            const fileName = file.filePath.split("/").pop() || file.filePath;
+            log.output(
+              `      ${fileName}: ${file.changes.toLocaleString()} changes`,
+              this.CONTEXT
+            );
+          }
+        }
+      }
+    }
+
     log.output("", this.CONTEXT);
   }
 
@@ -261,7 +331,11 @@ export function printTextSummary(summary: any, verbose = false): void {
     const commitMetrics = CommitSizeCalculator.calculate(summary.commits);
     SummaryFormatter.formatCommitSizes(commitMetrics);
 
-    SummaryFormatter.formatTopLanguages(summary.stats.topLanguages);
+    SummaryFormatter.formatTopLanguages(
+      summary.stats.topLanguages,
+      verbose,
+      summary.stats.otherFilesAnalysis
+    );
     SummaryFormatter.formatRepositoryBreakdown(summary, verbose);
     SummaryFormatter.formatTopFiles(summary.stats.topFiles, verbose);
 
