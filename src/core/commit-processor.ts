@@ -1,7 +1,7 @@
-import { SimpleGit } from 'simple-git';
+import { DefaultLogFields, SimpleGit } from 'simple-git';
+import { DatabaseManager } from '../storage/database';
 import { FileChange } from '../types';
 import { log } from '../utils/logger';
-import { DatabaseManager } from '../storage/database';
 
 export class CommitProcessor {
   constructor(private db: DatabaseManager) {}
@@ -9,7 +9,7 @@ export class CommitProcessor {
   async processCommit(
     git: SimpleGit,
     repoId: number,
-    logEntry: any
+    logEntry: DefaultLogFields
   ): Promise<void> {
     try {
       const stats = await this.getCommitStats(git, logEntry.hash);
@@ -78,7 +78,7 @@ export class CommitProcessor {
   }> {
     try {
       return await this.getRegularCommitStats(git, hash);
-    } catch (error) {
+    } catch {
       return await this.getFirstCommitStats(git, hash);
     }
   }
@@ -109,7 +109,7 @@ export class CommitProcessor {
         deletions: diffSummary.deletions,
         fileChanges,
       };
-    } catch (firstCommitError) {
+    } catch {
       log.warn(`Could not get stats for commit ${hash}`, 'commit-processor');
       return {
         filesChanged: 0,

@@ -1,13 +1,10 @@
-import { printTextSummary } from './text-formatter';
-import { printMarkdownSummary } from './markdown-formatter';
-import { log } from '../utils/logger';
+import { AnalyticsEngine } from '../core/analytics-engine';
 import { WorkSummary } from '../types';
-import {
-  AnalyticsEngine,
-  ComprehensiveWorkSummary,
-} from '../core/analytics-engine';
+import { log } from '../utils/logger';
+import { printMarkdownSummary } from './markdown-formatter';
+import { printTextSummary } from './text-formatter';
 
-export { printTextSummary, printMarkdownSummary };
+export { printMarkdownSummary, printTextSummary };
 
 export type OutputFormat = 'text' | 'json' | 'markdown';
 

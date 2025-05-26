@@ -1,4 +1,4 @@
-import { SimpleGit, LogResult } from 'simple-git';
+import { BranchSummary, LogResult, SimpleGit, TaskOptions } from 'simple-git';
 import { log } from '../utils/logger';
 
 export class CommitFetcher {
@@ -22,7 +22,7 @@ export class CommitFetcher {
     }
   }
 
-  private getBranchesToCheck(branches: any): Set<string> {
+  private getBranchesToCheck(branches: BranchSummary): Set<string> {
     const branchesToCheck = new Set<string>();
 
     this.addCurrentBranch(branchesToCheck, branches);
@@ -33,13 +33,19 @@ export class CommitFetcher {
     return branchesToCheck;
   }
 
-  private addCurrentBranch(branchesToCheck: Set<string>, branches: any): void {
+  private addCurrentBranch(
+    branchesToCheck: Set<string>,
+    branches: BranchSummary
+  ): void {
     if (branches.current) {
       branchesToCheck.add(branches.current);
     }
   }
 
-  private addCommonBranches(branchesToCheck: Set<string>, branches: any): void {
+  private addCommonBranches(
+    branchesToCheck: Set<string>,
+    branches: BranchSummary
+  ): void {
     for (const branch of CommitFetcher.COMMON_BRANCHES) {
       if (branches.all.includes(branch)) {
         branchesToCheck.add(branch);
@@ -49,7 +55,7 @@ export class CommitFetcher {
 
   private addRemoteCommonBranches(
     branchesToCheck: Set<string>,
-    branches: any
+    branches: BranchSummary
   ): void {
     for (const branch of CommitFetcher.COMMON_BRANCHES) {
       const remoteBranch = `origin/${branch}`;
@@ -61,7 +67,7 @@ export class CommitFetcher {
 
   private addFallbackBranches(
     branchesToCheck: Set<string>,
-    branches: any
+    branches: BranchSummary
   ): void {
     if (branchesToCheck.size === 0) {
       if (branches.current) {
@@ -82,7 +88,7 @@ export class CommitFetcher {
     branchesToCheck: Set<string>,
     since?: Date
   ): Promise<LogResult['all']> {
-    const allCommits: any[] = [];
+    const allCommits: LogResult['all'][number][] = [];
     const seenHashes = new Set<string>();
 
     for (const branch of branchesToCheck) {
@@ -109,46 +115,32 @@ export class CommitFetcher {
     git: SimpleGit,
     branch: string,
     since?: Date
-  ): Promise<any[]> {
-    const logArgs = this.buildLogArgs(since, branch);
-    const options = this.buildLogOptions();
-
-    const gitLog = await git.log(logArgs, options);
+  ): Promise<LogResult['all'][number][]> {
+    const options = this.buildLogOptions(since, branch);
+    const gitLog = await git.log(options);
     return [...gitLog.all];
   }
 
-  private buildLogArgs(since?: Date, branch?: string): string[] {
-    const logArgs: string[] = [
+  private buildLogOptions(since?: Date, branch?: string): TaskOptions {
+    const args: string[] = [
       `--max-count=${CommitFetcher.MAX_COMMITS_PER_BRANCH}`,
+      '--format=%H|%ai|%s|%D|%b|%an|%ae',
     ];
 
     if (since) {
-      logArgs.push(`--since=${since.toISOString()}`);
+      args.push(`--since=${since.toISOString()}`);
     }
 
     if (branch) {
-      logArgs.push(branch);
+      args.push(branch);
     }
 
-    return logArgs;
-  }
-
-  private buildLogOptions(): any {
-    return {
-      format: {
-        hash: '%H',
-        date: '%ai',
-        message: '%s',
-        body: '%b',
-        author_name: '%an',
-        author_email: '%ae',
-      },
-    };
+    return args;
   }
 
   private deduplicateAndAdd(
-    commits: any[],
-    allCommits: any[],
+    commits: LogResult['all'][number][],
+    allCommits: LogResult['all'][number][],
     seenHashes: Set<string>
   ): void {
     for (const commit of commits) {
@@ -164,10 +156,8 @@ export class CommitFetcher {
     since?: Date
   ): Promise<LogResult['all']> {
     try {
-      const logArgs = this.buildLogArgs(since);
-      const options = this.buildLogOptions();
-
-      const gitLog = await git.log(logArgs, options);
+      const options = this.buildLogOptions(since);
+      const gitLog = await git.log(options);
       return [...gitLog.all];
     } catch (fallbackError) {
       log.error(

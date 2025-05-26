@@ -5,13 +5,13 @@ import PQueue from 'p-queue';
  */
 export interface ProcessResult {
   success: boolean;
-  error?: any;
+  error?: Error | unknown;
 }
 
 export interface ParallelProcessingResult<T> {
   completed: number;
   failed: number;
-  errors: Array<{ item: T; error: any }>;
+  errors: Array<{ item: T; error: Error | unknown }>;
 }
 
 export type ProgressCallback<T> = (

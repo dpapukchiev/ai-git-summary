@@ -20,7 +20,7 @@ export class GitUtils {
         encoding: 'utf8',
       }).trim();
       return userName || null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -34,7 +34,7 @@ export class GitUtils {
         encoding: 'utf8',
       }).trim();
       return userEmail || null;
-    } catch (error) {
+    } catch {
       return null;
     }
   }

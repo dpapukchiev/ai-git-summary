@@ -1,5 +1,5 @@
 import { DatabaseManager } from '../storage/database';
-import { Commit, TimePeriod, WorkSummary } from '../types';
+import { Commit, Repository, TimePeriod, WorkSummary } from '../types';
 import { DateUtils } from '../utils/date-utils';
 import { LanguageDetector } from '../utils/language-detector';
 
@@ -182,11 +182,11 @@ class RepositoryFilter {
     );
   }
 
-  private matchesAnyPath(repo: any, paths: string[]): boolean {
+  private matchesAnyPath(repo: Repository, paths: string[]): boolean {
     return paths.some(path => repo.path.includes(path) || repo.name === path);
   }
 
-  extractRepositoryIds(repositories: any[]): number[] {
+  extractRepositoryIds(repositories: Repository[]): number[] {
     return repositories.map(repo => repo.id!).filter(id => id !== undefined);
   }
 }
@@ -195,11 +195,7 @@ class RepositoryFilter {
 class CommitStatsCalculator {
   constructor(private db: DatabaseManager) {}
 
-  calculateStats(
-    commits: Commit[],
-    period: TimePeriod,
-    repositoryIds: number[]
-  ) {
+  calculateStats(commits: Commit[], period: TimePeriod) {
     const basicStats = this.calculateBasicStats(commits);
     const timeStats = this.calculateTimeStats(commits, period);
     const languageCalculator = new LanguageStatsCalculator(this.db);
@@ -279,11 +275,7 @@ export class DataAggregator {
     const commits = this.getCommitsForPeriod(period, repositories, author);
     const repositoryIds =
       this.repositoryFilter.extractRepositoryIds(repositories);
-    const stats = this.statsCalculator.calculateStats(
-      commits,
-      period,
-      repositoryIds
-    );
+    const stats = this.statsCalculator.calculateStats(commits, period);
 
     return {
       period,
@@ -335,7 +327,7 @@ export class DataAggregator {
 
   private getCommitsForPeriod(
     period: TimePeriod,
-    repositories: any[],
+    repositories: Repository[],
     author?: string
   ): Commit[] {
     const repoIds = this.repositoryFilter.extractRepositoryIds(repositories);
