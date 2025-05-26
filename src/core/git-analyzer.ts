@@ -7,12 +7,13 @@ import { log } from '../utils/logger';
 import { processInParallel, ProcessResult } from '../utils/parallel-processor';
 import { CommitFetcher } from './commit-fetcher';
 import { CommitProcessor } from './commit-processor';
+import { CommitStatsService } from './commit-stats-service';
+import { SimpleGitOperations } from './git-operations';
 import { GitRemoteHandler } from './git-remote-handler';
 import { RepositoryDiscovery } from './repository-discovery';
 
 export class GitAnalyzer {
   private db: DatabaseManager;
-  private commitProcessor: CommitProcessor;
   private commitFetcher: CommitFetcher;
   private repositoryDiscovery: RepositoryDiscovery;
   private gitRemoteHandler: GitRemoteHandler;
@@ -20,7 +21,6 @@ export class GitAnalyzer {
 
   constructor(db: DatabaseManager, options?: { concurrency?: number }) {
     this.db = db;
-    this.commitProcessor = new CommitProcessor(db);
     this.commitFetcher = new CommitFetcher();
     this.repositoryDiscovery = new RepositoryDiscovery();
     this.gitRemoteHandler = new GitRemoteHandler();
@@ -55,13 +55,22 @@ export class GitAnalyzer {
         'git-analyzer'
       );
 
+      // Create a git operations instance for this specific repository
+      const repoGitOperations = new SimpleGitOperations(git);
+      const repoStatsService = new CommitStatsService(repoGitOperations);
+      const repoCommitProcessor = new CommitProcessor(
+        this.db,
+        repoStatsService
+      );
+
       const results = await processInParallel(
         [...commits],
         async (commit): Promise<ProcessResult> => {
           log.debug(`Processing commit: ${commit?.hash}`, 'git-analyzer');
 
           try {
-            await this.commitProcessor.processCommit(git, repo.id, commit);
+            // Updated method call - removed git parameter
+            await repoCommitProcessor.processCommit(repo.id, commit);
             return { success: true };
           } catch (error) {
             log.error(
