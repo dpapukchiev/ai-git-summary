@@ -273,8 +273,6 @@ export class DataAggregator {
   ): Promise<WorkSummary> {
     const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
     const commits = this.getCommitsForPeriod(period, repositories, author);
-    const repositoryIds =
-      this.repositoryFilter.extractRepositoryIds(repositories);
     const stats = this.statsCalculator.calculateStats(commits, period);
 
     return {

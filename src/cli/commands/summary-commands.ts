@@ -1,11 +1,11 @@
 import { Command } from 'commander';
 import { DataAggregator } from '../../core/data-aggregator';
+import { formatSummary, OutputFormat } from '../../formatters';
+import { formatRepositoryDetail } from '../../formatters/repository-detail-formatter';
+import { PeriodType } from '../../types';
 import { DateUtils } from '../../utils/date-utils';
 import { GitUtils } from '../../utils/git-utils';
-import { PeriodType } from '../../types';
-import { formatSummary, OutputFormat } from '../../formatters';
 import { log } from '../../utils/logger';
-import { formatRepositoryDetail } from '../../formatters/repository-detail-formatter';
 
 /**
  * Add summary commands to the CLI program
@@ -292,7 +292,7 @@ export function addSummaryCommands(
 
           timePeriod = DateUtils.getPeriod('1week', startDate, endDate);
         } else {
-          timePeriod = DateUtils.getPeriod(options.period as any);
+          timePeriod = DateUtils.getPeriod(options.period as PeriodType);
         }
 
         // Generate summary for the specific repository

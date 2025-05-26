@@ -1,17 +1,18 @@
+import { Commit, TimePeriod } from '../types';
 import { DateUtils } from '../utils/date-utils';
 import {
-  CommitSizeMetrics,
-  TimePatterns,
   ActivityMetrics,
-  WeeklyPattern,
   COMMIT_SIZE_THRESHOLDS,
+  CommitSizeMetrics,
   DISPLAY_LIMITS,
+  TimePatterns,
+  WeeklyPattern,
 } from './types';
 
 /**
  * Helper function to find most productive day
  */
-export function getMostProductiveDay(commits: any[]): string {
+export function getMostProductiveDay(commits: Commit[]): string {
   if (!commits || commits.length === 0) return 'N/A';
 
   const dayCommits = new Map<string, number>();
@@ -36,7 +37,7 @@ export function getMostProductiveDay(commits: any[]): string {
  * Calculator for commit size metrics
  */
 export class CommitSizeCalculator {
-  static calculate(commits: any[]): CommitSizeMetrics {
+  static calculate(commits: Commit[]): CommitSizeMetrics {
     if (!commits || commits.length === 0) {
       return {
         median: 0,
@@ -50,7 +51,7 @@ export class CommitSizeCalculator {
     }
 
     const commitSizes = commits
-      .map((c: any) => c.insertions + c.deletions)
+      .map(c => c.insertions + c.deletions)
       .sort((a: number, b: number) => a - b);
 
     const median = commitSizes[Math.floor(commitSizes.length / 2)] || 0;
@@ -83,7 +84,7 @@ export class CommitSizeCalculator {
  * Calculator for time-based patterns with enhanced granular analysis
  */
 export class TimePatternCalculator {
-  static calculate(commits: any[]): TimePatterns {
+  static calculate(commits: Commit[]): TimePatterns {
     if (!commits || commits.length === 0) {
       return {
         workingHoursCommits: 0,
@@ -102,11 +103,11 @@ export class TimePatternCalculator {
     const totalCommits = commits.length;
 
     // Legacy calculations for backward compatibility
-    const workingHoursCommits = commits.filter((c: any) =>
+    const workingHoursCommits = commits.filter(c =>
       DateUtils.isWorkingHours(c.date)
     ).length;
 
-    const weekendCommits = commits.filter((c: any) =>
+    const weekendCommits = commits.filter(c =>
       DateUtils.isWeekend(c.date)
     ).length;
 
@@ -149,10 +150,10 @@ export class TimePatternCalculator {
     const timePeriods = this.calculateTimePeriods(commits, totalCommits);
 
     // Early bird and night owl analysis
-    const earlyBirdCommits = commits.filter((c: any) =>
+    const earlyBirdCommits = commits.filter(c =>
       DateUtils.isEarlyBird(c.date)
     ).length;
-    const nightOwlCommits = commits.filter((c: any) =>
+    const nightOwlCommits = commits.filter(c =>
       DateUtils.isNightOwl(c.date)
     ).length;
 
@@ -181,7 +182,7 @@ export class TimePatternCalculator {
     };
   }
 
-  private static calculateTimePeriods(commits: any[], totalCommits: number) {
+  private static calculateTimePeriods(commits: Commit[], totalCommits: number) {
     const periodMap = new Map<
       string,
       { commits: number; range: string; isWorking: boolean }
@@ -207,7 +208,7 @@ export class TimePatternCalculator {
     });
 
     // Count commits by period
-    commits.forEach((commit: any) => {
+    commits.forEach((commit: Commit) => {
       const hour = commit.date.getHours();
       const periodName = DateUtils.getTimePeriodName(hour);
       const period = periodMap.get(periodName);
@@ -232,7 +233,10 @@ export class TimePatternCalculator {
  * Calculator for activity metrics and streaks
  */
 export class ActivityCalculator {
-  static calculateMetrics(commits: any[], period: any): ActivityMetrics {
+  static calculateMetrics(
+    commits: Commit[],
+    period: TimePeriod
+  ): ActivityMetrics {
     if (!commits || commits.length === 0) {
       return {
         longestStreak: 0,
@@ -244,7 +248,7 @@ export class ActivityCalculator {
     const longestStreak = this.calculateLongestStreak(commits);
     const mostProductiveDay = getMostProductiveDay(commits);
     const activeDays = [
-      ...new Set(commits.map((c: any) => DateUtils.formatDate(c.date))),
+      ...new Set(commits.map(c => DateUtils.formatDate(c.date))),
     ].length;
     const totalDays = DateUtils.getDaysInPeriod(
       period.startDate,
@@ -259,9 +263,9 @@ export class ActivityCalculator {
     };
   }
 
-  private static calculateLongestStreak(commits: any[]): number {
+  private static calculateLongestStreak(commits: Commit[]): number {
     const commitDays = [
-      ...new Set(commits.map((c: any) => DateUtils.formatDate(c.date))),
+      ...new Set(commits.map(c => DateUtils.formatDate(c.date))),
     ].sort();
 
     let currentStreak = 0;
@@ -293,7 +297,7 @@ export class ActivityCalculator {
  * Generator for weekly activity patterns
  */
 export class WeeklyPatternGenerator {
-  static generate(commits: any[]): WeeklyPattern[] {
+  static generate(commits: Commit[]): WeeklyPattern[] {
     if (!commits || commits.length === 0) {
       return [];
     }
@@ -301,7 +305,7 @@ export class WeeklyPatternGenerator {
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dayCommits = new Array(7).fill(0);
 
-    commits.forEach((commit: any) => {
+    commits.forEach(commit => {
       dayCommits[commit.date.getDay()]++;
     });
 

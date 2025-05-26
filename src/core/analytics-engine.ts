@@ -1,17 +1,17 @@
-import { WorkSummary } from '../types';
+import { AchievementGenerator } from '../formatters/achievement-generator';
 import {
-  CommitSizeMetrics,
-  TimePatterns,
-  ActivityMetrics,
-  WeeklyPattern,
-} from '../formatters/types';
-import {
+  ActivityCalculator,
   CommitSizeCalculator,
   TimePatternCalculator,
-  ActivityCalculator,
   WeeklyPatternGenerator,
 } from '../formatters/calculators';
-import { AchievementGenerator } from '../formatters/achievement-generator';
+import {
+  ActivityMetrics,
+  CommitSizeMetrics,
+  TimePatterns,
+  WeeklyPattern,
+} from '../formatters/types';
+import { Commit, Repository, WorkSummary } from '../types';
 
 /**
  * Repository contribution breakdown
@@ -111,8 +111,8 @@ export class AnalyticsEngine {
    * Calculate detailed repository contribution breakdown
    */
   private static calculateRepositoryBreakdown(
-    repositories: any[],
-    commits: any[]
+    repositories: Repository[],
+    commits: Commit[]
   ): RepositoryContribution[] {
     return (
       repositories

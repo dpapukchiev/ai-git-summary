@@ -1,13 +1,14 @@
-import { TimePatterns, ACHIEVEMENT_THRESHOLDS } from './types';
+import { Repository, WorkSummary } from '../types';
+import { ACHIEVEMENT_THRESHOLDS, TimePatterns } from './types';
 
 /**
  * Generator for achievements based on statistics
  */
 export class AchievementGenerator {
   static generate(
-    stats: any,
+    stats: WorkSummary['stats'],
     timePatterns: TimePatterns,
-    repositories: any[]
+    repositories: Repository[]
   ): string[] {
     const achievements: string[] = [];
 
