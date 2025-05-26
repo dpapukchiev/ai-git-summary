@@ -549,7 +549,268 @@ npm run dev        # Run in development mode with tsx
 npm run start      # Run built version from dist/
 npm run lint       # Run ESLint on source files
 npm run format     # Format code with Prettier
+npm run test       # Run test suite
 ```
+
+## Testing
+
+The project includes a comprehensive test suite built with Jest and TypeScript, ensuring code
+quality and reliability across all core functionality.
+
+### Test Setup
+
+The testing environment is configured with:
+
+- **Jest** - Testing framework with TypeScript support via `ts-jest`
+- **In-memory SQLite** - Isolated database testing without file system dependencies
+- **Mock utilities** - Comprehensive mocking for external dependencies
+- **Coverage reporting** - Detailed code coverage analysis
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+# or
+yarn test
+
+# Run tests with coverage report
+npm test -- --coverage
+# or
+yarn test --coverage
+
+# Run tests in watch mode (development)
+npm test -- --watch
+# or
+yarn test --watch
+
+# Run specific test file
+npm test -- tests/core/data-aggregator.test.ts
+
+# Run tests matching a pattern
+npm test -- --testNamePattern="should generate accurate work summary"
+```
+
+### Test Coverage
+
+Current test coverage includes:
+
+- **Core Logic**: 36.48% coverage
+
+  - `data-aggregator.ts`: 98.36% (comprehensive business logic testing)
+  - `git-analyzer.ts`: 33.33% (integration tests)
+  - `database.ts`: 70.78% (storage operations)
+
+- **Utilities**: 66.76% coverage
+
+  - `date-utils.ts`: 97.32% (date manipulation functions)
+  - `language-detector.ts`: 73.61% (file extension analysis)
+
+- **Areas for improvement**:
+  - CLI commands and handlers (0% coverage)
+  - Formatters (0% coverage)
+  - Git utilities and remote handling
+
+### Test Structure
+
+```
+tests/
+├── core/                    # Core functionality tests
+│   ├── data-aggregator.test.ts      # Business logic and aggregation
+│   ├── database.test.ts             # Database operations
+│   └── git-analyzer.integration.test.ts # Git analysis integration
+├── utils/                   # Utility function tests
+│   └── date-utils.test.ts           # Date manipulation functions
+├── helpers/                 # Test utilities and fixtures
+│   └── test-fixtures.ts             # Mock data creators
+└── setup.ts                # Global test configuration
+```
+
+### Testing Patterns
+
+#### 1. **Unit Tests**
+
+Test individual functions and classes in isolation:
+
+```typescript
+describe('DataAggregator', () => {
+  let db: DatabaseManager;
+  let dataAggregator: DataAggregator;
+
+  beforeEach(() => {
+    db = createTestDatabase();
+    dataAggregator = new DataAggregator(db);
+  });
+
+  it('should calculate correct statistics', async () => {
+    // Arrange
+    const commits = createMockCommits(5);
+    commits.forEach(commit => db.addCommit(commit));
+
+    // Act
+    const summary = await dataAggregator.generateWorkSummary(timePeriod);
+
+    // Assert
+    expect(summary.stats.totalCommits).toBe(5);
+  });
+});
+```
+
+#### 2. **Integration Tests**
+
+Test component interactions and workflows:
+
+```typescript
+describe('GitAnalyzer Integration', () => {
+  it('should analyze repository and store commits', async () => {
+    const analyzer = new GitAnalyzer(db);
+    const result = await analyzer.analyzeRepository(repoPath);
+
+    expect(result.success).toBe(true);
+    expect(db.getCommitCount()).toBeGreaterThan(0);
+  });
+});
+```
+
+#### 3. **Mock Data Creation**
+
+Consistent test data using factory functions:
+
+```typescript
+// Create mock repository
+const repo = createMockRepository({
+  name: 'test-project',
+  path: '/path/to/project',
+});
+
+// Create mock commits with specific characteristics
+const commit = createMockCommit({
+  author: 'John Doe',
+  insertions: 50,
+  deletions: 10,
+  message: 'feat: add authentication',
+});
+```
+
+#### 4. **Database Testing**
+
+Isolated database testing with in-memory SQLite:
+
+```typescript
+beforeEach(() => {
+  db = createTestDatabase(); // Creates :memory: database
+});
+
+afterEach(() => {
+  db.close(); // Clean up after each test
+});
+```
+
+### Test Configuration
+
+#### Jest Configuration (`jest.config.js`)
+
+```javascript
+module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+    '!src/cli/index.ts', // Entry point excluded
+  ],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  testTimeout: 30000,
+};
+```
+
+#### Global Test Setup (`tests/setup.ts`)
+
+- Mocks external dependencies (chalk, p-queue)
+- Handles ES module compatibility issues
+- Cleans up test databases automatically
+
+### Writing New Tests
+
+When adding new features, follow these testing guidelines:
+
+#### 1. **Test File Naming**
+
+- Unit tests: `feature-name.test.ts`
+- Integration tests: `feature-name.integration.test.ts`
+- Place tests in corresponding directory structure under `tests/`
+
+#### 2. **Test Structure**
+
+```typescript
+import { FeatureClass } from '../../src/path/to/feature';
+import { createTestDatabase, createMockData } from '../helpers/test-fixtures';
+
+describe('FeatureClass', () => {
+  let instance: FeatureClass;
+
+  beforeEach(() => {
+    // Setup test environment
+    instance = new FeatureClass();
+  });
+
+  describe('methodName', () => {
+    it('should handle normal case correctly', () => {
+      // Arrange
+      const input = createMockData();
+
+      // Act
+      const result = instance.methodName(input);
+
+      // Assert
+      expect(result).toBeDefined();
+      expect(result.property).toBe(expectedValue);
+    });
+
+    it('should handle edge cases', () => {
+      // Test edge cases, error conditions, etc.
+    });
+  });
+});
+```
+
+#### 3. **Test Coverage Goals**
+
+- **Core business logic**: Aim for 90%+ coverage
+- **Utility functions**: Aim for 95%+ coverage
+- **Integration points**: Focus on happy path and error scenarios
+- **CLI commands**: Test command parsing and execution flow
+
+#### 4. **Mock Strategy**
+
+- Use in-memory database for storage tests
+- Mock external dependencies (git, file system, network)
+- Create realistic test data with factory functions
+- Avoid mocking internal application logic
+
+### Continuous Integration
+
+Tests run automatically on:
+
+- Pull requests
+- Main branch commits
+- Release builds
+
+Coverage reports are generated and can be viewed in the `coverage/` directory after running tests
+with the `--coverage` flag.
+
+### Testing Best Practices
+
+1. **Isolation**: Each test should be independent and not rely on other tests
+2. **Clarity**: Test names should clearly describe what is being tested
+3. **Arrange-Act-Assert**: Structure tests with clear setup, execution, and verification phases
+4. **Edge Cases**: Test boundary conditions, error scenarios, and invalid inputs
+5. **Performance**: Keep tests fast by using in-memory databases and minimal setup
+6. **Maintainability**: Use helper functions and factories to reduce test code duplication
 
 ### Dependencies
 
@@ -598,7 +859,6 @@ The project follows clean code principles:
 - 🔗 **Integration APIs** - Asana, Jira, GitHub Issues
 - 📱 **Mobile App** - View summaries on mobile
 - 🏆 **Achievement System** - Productivity milestones
-- 🧪 **Testing Suite** - Comprehensive test coverage
 
 ## Contributing
 
