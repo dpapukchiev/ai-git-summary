@@ -364,11 +364,22 @@ export class DatabaseManager {
   }
 
   private mapFileChange(row: FileChangeRow): FileChange {
+    // Validate change_type to ensure it matches the expected union type
+    const validChangeTypes = [
+      'added',
+      'modified',
+      'deleted',
+      'renamed',
+    ] as const;
+    const changeType = validChangeTypes.includes(row.change_type as any)
+      ? (row.change_type as 'added' | 'modified' | 'deleted' | 'renamed')
+      : 'modified'; // Default fallback
+
     return {
       id: row.id,
       commitId: row.commit_id,
       filePath: row.file_path,
-      changeType: row.change_type,
+      changeType,
       insertions: row.insertions,
       deletions: row.deletions,
     };
