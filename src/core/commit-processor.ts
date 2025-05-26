@@ -78,22 +78,42 @@ export class CommitProcessor {
   }> {
     try {
       return await this.getRegularCommitStats(git, hash);
-    } catch {
-      return await this.getFirstCommitStats(git, hash);
+    } catch (regularError) {
+      log.debug(
+        `Regular commit stats failed for ${hash}: ${(regularError as Error).message}`,
+        'commit-processor'
+      );
+      try {
+        return await this.getFirstCommitStats(git, hash);
+      } catch (firstCommitError) {
+        log.debug(
+          `First commit stats failed for ${hash}: ${(firstCommitError as Error).message}`,
+          'commit-processor'
+        );
+        throw firstCommitError;
+      }
     }
   }
 
   private async getRegularCommitStats(git: SimpleGit, hash: string) {
-    const diffSummary = await git.diffSummary([`${hash}^`, hash]);
-    const diff = await git.diff([`${hash}^`, hash, '--numstat']);
-    const fileChanges = this.parseDiffNumstat(diff);
+    try {
+      const diffSummary = await git.diffSummary([`${hash}^`, hash]);
+      const diff = await git.diff([`${hash}^`, hash, '--numstat']);
+      const fileChanges = this.parseDiffNumstat(diff);
 
-    return {
-      filesChanged: diffSummary.files.length,
-      insertions: diffSummary.insertions,
-      deletions: diffSummary.deletions,
-      fileChanges,
-    };
+      return {
+        filesChanged: diffSummary.files.length,
+        insertions: diffSummary.insertions,
+        deletions: diffSummary.deletions,
+        fileChanges,
+      };
+    } catch (error) {
+      log.debug(
+        `Git diff operations failed for commit ${hash}: ${(error as Error).message}`,
+        'commit-processor'
+      );
+      throw error;
+    }
   }
 
   private async getFirstCommitStats(git: SimpleGit, hash: string) {
@@ -109,8 +129,11 @@ export class CommitProcessor {
         deletions: diffSummary.deletions,
         fileChanges,
       };
-    } catch {
-      log.warn(`Could not get stats for commit ${hash}`, 'commit-processor');
+    } catch (error) {
+      log.warn(
+        `Could not get stats for commit ${hash}: ${(error as Error).message}`,
+        'commit-processor'
+      );
       return {
         filesChanged: 0,
         insertions: 0,

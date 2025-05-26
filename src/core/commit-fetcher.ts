@@ -124,7 +124,6 @@ export class CommitFetcher {
   private buildLogOptions(since?: Date, branch?: string): TaskOptions {
     const args: string[] = [
       `--max-count=${CommitFetcher.MAX_COMMITS_PER_BRANCH}`,
-      '--format=%H|%ai|%s|%D|%b|%an|%ae',
     ];
 
     if (since) {
