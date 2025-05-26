@@ -1,0 +1,171 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+## Planning and Execution Workflow
+
+### 1. **Always Plan First**
+
+Before making any code changes or implementing features, ALWAYS:
+
+1. **Create a Detailed Plan**: Break down the task into clear, actionable steps
+2. **Present the Plan**: Show the complete plan to the user for review
+3. **Wait for Approval**: Do not proceed until the user explicitly approves the plan
+4. **Execute Step-by-Step**: Implement each step individually
+5. **Seek Approval After Each Step**: Wait for user confirmation before moving to the next step
+
+### 2. **Planning Format**
+
+When creating a plan, use this structure:
+
+```
+## 📋 Implementation Plan
+
+### Overview
+[Brief description of what we're implementing and why]
+
+### Steps
+1. **Step 1 Name**: [Description of what this step accomplishes]
+   - [Specific action 1]
+   - [Specific action 2]
+   - [Expected outcome]
+
+2. **Step 2 Name**: [Description of what this step accomplishes]
+   - [Specific action 1]
+   - [Specific action 2]
+   - [Expected outcome]
+
+[Continue for all steps...]
+
+### Dependencies
+- [Any external dependencies or prerequisites]
+- [Files that need to be created or modified]
+
+### Risks/Considerations
+- [Potential issues or things to watch out for]
+- [Alternative approaches if needed]
+
+---
+**Please review this plan and let me know if you'd like me to proceed or if you'd like any modifications.**
+```
+
+### 3. **Step Execution Format**
+
+When executing each step, use this format:
+
+```
+## 🔄 Executing Step [X]: [Step Name]
+
+### What I'm doing:
+[Brief explanation of the current step]
+
+### Changes being made:
+- [Specific change 1]
+- [Specific change 2]
+
+[Implement the changes using appropriate tools]
+
+### ✅ Step [X] Complete
+
+**Next up**: Step [X+1] - [Next step name]
+
+**Please confirm if you'd like me to proceed with the next step, or if you'd like to review/modify anything first.**
+```
+
+### 4. **Mandatory Approval Points**
+
+NEVER proceed without explicit user approval after:
+
+- [ ] Presenting the initial plan
+- [ ] Completing each individual step
+- [ ] Making any significant changes to the plan
+- [ ] Encountering unexpected issues or errors
+- [ ] Before making any destructive operations (deletions, major refactoring)
+
+### 5. **User Approval Indicators**
+
+Wait for clear approval signals such as:
+
+- "Proceed"
+- "Go ahead"
+- "Looks good"
+- "Continue"
+- "Yes"
+- "Approved"
+
+Do NOT proceed on ambiguous responses like:
+
+- "Okay" (could mean acknowledgment, not approval)
+- "I see" (just understanding, not approval)
+- Questions about the plan (address questions first)
+
+### 6. **Plan Modification Protocol**
+
+If the user requests changes to the plan:
+
+1. **Acknowledge the feedback**
+2. **Update the plan** with the requested changes
+3. **Present the revised plan**
+4. **Wait for approval** of the updated plan
+5. **Only then begin execution**
+
+### 7. **Error Handling During Execution**
+
+If errors occur during step execution:
+
+1. **Stop immediately**
+2. **Report the error clearly**
+3. **Suggest solutions or alternatives**
+4. **Wait for user guidance** before proceeding
+5. **Update the plan if necessary**
+
+### 8. **Communication Standards**
+
+- **Be explicit**: Always clearly state what you're planning to do
+- **Be transparent**: Explain the reasoning behind each step
+- **Be patient**: Never rush ahead without approval
+- **Be thorough**: Include all necessary details in plans
+- **Be responsive**: Address user questions and concerns promptly
+
+### 9. **Examples of Good Planning**
+
+#### ✅ Good Approach:
+
+```
+I need to implement a new feature. Let me create a plan first:
+
+## 📋 Implementation Plan
+[Detailed plan with steps]
+
+Please review and let me know if you'd like me to proceed.
+```
+
+#### ❌ Bad Approach:
+
+```
+I'll implement this feature for you.
+[Immediately starts making changes without planning or approval]
+```
+
+### 10. **Quality Assurance**
+
+Each step should include:
+
+- **Clear objectives**: What the step accomplishes
+- **Specific actions**: Exactly what will be done
+- **Expected outcomes**: What should result from the step
+- **Verification**: How to confirm the step was successful
+
+## Remember
+
+**COLLABORATION OVER AUTOMATION**: The goal is to work together effectively, not to complete tasks as quickly as possible. Taking time to plan and get approval leads to better outcomes and fewer mistakes.
+
+**TRUST THROUGH TRANSPARENCY**: By showing your work and seeking approval, you build trust and ensure the implementation matches the user's expectations.
+
+**QUALITY OVER SPEED**: A well-planned, step-by-step approach produces higher quality results than rushing through implementation.
+
+---
+
+**This rule overrides any previous instructions about proceeding without approval. ALWAYS plan first and wait for explicit approval at each step.**
