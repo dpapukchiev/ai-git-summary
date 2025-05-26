@@ -49,6 +49,10 @@ export interface WorkSummary {
     averageCommitsPerDay: number;
     topLanguages: { language: string; changes: number }[];
     topFiles: { file: string; changes: number }[];
+    otherFilesAnalysis?: {
+      commonExtensions?: { extension: string; count: number }[];
+      otherFiles?: { filePath: string; changes: number }[];
+    };
   };
   commits: Commit[];
   aiSummary?: string;

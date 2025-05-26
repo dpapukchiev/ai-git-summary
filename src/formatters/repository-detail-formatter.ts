@@ -1,40 +1,48 @@
 import { DateUtils } from "../utils/date-utils";
 import { log } from "../utils/logger";
 import { WorkSummary } from "../types";
-import { TimePatternCalculator } from "./calculators";
+import {
+  AnalyticsEngine,
+  ComprehensiveWorkSummary,
+} from "../core/analytics-engine";
 import { OutputFormat } from "./index";
 
 /**
  * Format detailed repository analysis
+ * Now uses analytics engine for consistent data processing
  */
 export async function formatRepositoryDetail(
   summary: WorkSummary,
   format: OutputFormat = "text",
-  verbose = false,
+  verbose = false
 ): Promise<void> {
   if (summary.repositories.length === 0) {
     log.error("No repositories found for analysis", undefined, "repo-detail");
     return;
   }
 
+  // Compute comprehensive analytics once
+  const comprehensiveSummary = AnalyticsEngine.computeAnalytics(summary);
+
   switch (format) {
     case "json":
-      printRepositoryDetailJSON(summary);
+      printRepositoryDetailJSON(comprehensiveSummary);
       break;
     case "markdown":
-      printRepositoryDetailMarkdown(summary, verbose);
+      printRepositoryDetailMarkdown(comprehensiveSummary, verbose);
       break;
     default:
-      printRepositoryDetailText(summary, verbose);
+      printRepositoryDetailText(comprehensiveSummary, verbose);
   }
 }
 
 /**
  * Print detailed text analysis of a specific repository
+ * Now uses pre-computed analytics instead of calculating during formatting
  */
 function printRepositoryDetailText(
-  summary: WorkSummary,
-  verbose: boolean,
+  summary: ComprehensiveWorkSummary,
+  verbose: boolean
 ): void {
   if (summary.repositories.length === 0) {
     log.error("No repository found for analysis", undefined, "repo-detail");
@@ -49,165 +57,60 @@ function printRepositoryDetailText(
 
   const repoCommits = summary.commits.filter((c) => c.repoId === repo.id);
 
-  log.output(`\n🔍 Repository Detail Analysis: ${repo.name}\n`, "repo-detail");
-  log.output(`📂 Path: ${repo.path}`, "repo-detail");
+  log.output("", "repo-detail");
+  log.output(`🔍 Repository Analysis: ${repo.name}`, "repo-detail");
+  log.output("", "repo-detail");
+  log.output(`Path: ${repo.path}`, "repo-detail");
   if (repo.remoteUrl) {
-    log.output(`🔗 Remote: ${repo.remoteUrl}`, "repo-detail");
+    log.output(`Remote: ${repo.remoteUrl}`, "repo-detail");
   }
   log.output(
-    `📅 Period: ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}\n`,
-    "repo-detail",
+    `Period: ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}`,
+    "repo-detail"
   );
+  log.output("", "repo-detail");
 
-  // Overall repository statistics
+  // Overall statistics
   log.output("📊 Repository Statistics:", "repo-detail");
   log.output(
     `  Total Commits: ${repoCommits.length.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
   log.output(
     `  Files Changed: ${summary.stats.totalFilesChanged.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
   log.output(
     `  Lines Added: +${summary.stats.totalInsertions.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
   log.output(
     `  Lines Deleted: -${summary.stats.totalDeletions.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
 
   const netChange =
     summary.stats.totalInsertions - summary.stats.totalDeletions;
   log.output(
     `  Net Change: ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`,
-    "repo-detail",
+    "repo-detail"
   );
 
   if (repoCommits.length > 0) {
     const avgChangesPerCommit = Math.round(
       (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-        repoCommits.length,
+        repoCommits.length
     );
     log.output(
       `  Average Changes/Commit: ${avgChangesPerCommit.toLocaleString()} lines`,
-      "repo-detail",
+      "repo-detail"
     );
   }
+
   log.output("", "repo-detail");
-
-  // Commit size breakdown
-  if (repoCommits.length > 0) {
-    log.output("📏 Commit Size Analysis:", "repo-detail");
-
-    const commitSizes = repoCommits.map((c) => c.insertions + c.deletions);
-    const smallCommits = commitSizes.filter((size) => size <= 10).length;
-    const mediumCommits = commitSizes.filter(
-      (size) => size > 10 && size <= 100,
-    ).length;
-    const largeCommits = commitSizes.filter(
-      (size) => size > 100 && size <= 1000,
-    ).length;
-    const massiveCommits = commitSizes.filter((size) => size > 1000).length;
-
-    log.output(
-      `  Small (≤10 lines): ${smallCommits} commits (${Math.round((smallCommits / repoCommits.length) * 100)}%)`,
-      "repo-detail",
-    );
-    log.output(
-      `  Medium (11-100 lines): ${mediumCommits} commits (${Math.round((mediumCommits / repoCommits.length) * 100)}%)`,
-      "repo-detail",
-    );
-    log.output(
-      `  Large (101-1K lines): ${largeCommits} commits (${Math.round((largeCommits / repoCommits.length) * 100)}%)`,
-      "repo-detail",
-    );
-    log.output(
-      `  Massive (>1K lines): ${massiveCommits} commits (${Math.round((massiveCommits / repoCommits.length) * 100)}%)`,
-      "repo-detail",
-    );
-
-    if (massiveCommits > 0) {
-      log.output(
-        `\n⚠️  Warning: ${massiveCommits} massive commits detected (>1K lines each)`,
-        "repo-detail",
-      );
-
-      // Show the largest commits
-      const largestCommits = repoCommits
-        .map((c) => ({ ...c, totalChanges: c.insertions + c.deletions }))
-        .sort((a, b) => b.totalChanges - a.totalChanges)
-        .slice(0, 10);
-
-      log.output("\n🔍 Top 10 Largest Commits:", "repo-detail");
-      for (const commit of largestCommits) {
-        const date = DateUtils.formatDate(commit.date);
-        const changes = commit.totalChanges.toLocaleString();
-        log.output(
-          `  ${date} - ${changes} lines - ${commit.message.substring(0, 60)}${commit.message.length > 60 ? "..." : ""}`,
-          "repo-detail",
-        );
-        log.output(
-          `    by ${commit.author} (+${commit.insertions}/-${commit.deletions})`,
-          "repo-detail",
-        );
-      }
-    }
-    log.output("", "repo-detail");
-
-    // Recommendations
-    if (summary.stats.totalInsertions + summary.stats.totalDeletions > 50000) {
-      log.output("💡 Recommendations:", "repo-detail");
-
-      if (massiveCommits > 0) {
-        log.output(
-          "  • Consider reviewing large commits - they may contain generated code, bulk changes, or should be split",
-          "repo-detail",
-        );
-      }
-
-      if (summary.stats.topFiles.length > 0) {
-        const topFile = summary.stats.topFiles[0];
-        if (topFile && topFile.changes > 1000) {
-          log.output(
-            `  • File '${topFile.file}' has many changes - consider if it needs refactoring`,
-            "repo-detail",
-          );
-        }
-      }
-
-      const avgCommitSize =
-        repoCommits.length > 0
-          ? Math.round(
-              (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-                repoCommits.length,
-            )
-          : 0;
-
-      if (avgCommitSize > 500) {
-        log.output(
-          "  • Average commit size is quite large - consider making smaller, more focused commits",
-          "repo-detail",
-        );
-      }
-
-      log.output(
-        "  • Use --author flag to analyze specific contributor patterns",
-        "repo-detail",
-      );
-      log.output(
-        "  • Use custom date ranges to focus on specific time periods",
-        "repo-detail",
-      );
-      log.output("", "repo-detail");
-    }
-  }
 
   // Author breakdown
   if (repoCommits.length > 0) {
-    log.output("👥 Author Contributions:", "repo-detail");
-
     const authorStats = new Map<
       string,
       { commits: number; insertions: number; deletions: number }
@@ -231,93 +134,84 @@ function printRepositoryDetailText(
         ...stats,
         totalChanges: stats.insertions + stats.deletions,
       }))
-      .sort((a, b) => b.totalChanges - a.totalChanges)
-      .slice(0, 10);
+      .sort((a, b) => b.totalChanges - a.totalChanges);
 
-    for (const author of sortedAuthors) {
-      const percentage = Math.round(
-        (author.totalChanges /
-          (summary.stats.totalInsertions + summary.stats.totalDeletions)) *
-          100,
-      );
+    log.output("👥 Top Contributors:", "repo-detail");
+    for (const author of sortedAuthors.slice(0, 10)) {
       log.output(
-        `  ${author.author}: ${author.commits} commits, ${author.totalChanges.toLocaleString()} lines (${percentage}%)`,
-        "repo-detail",
+        `  ${author.author}: ${author.commits} commits, ${author.totalChanges.toLocaleString()} lines changed`,
+        "repo-detail"
       );
     }
     log.output("", "repo-detail");
   }
 
-  // Language breakdown
-  if (summary.stats.topLanguages.length > 0) {
-    log.output("💻 Language Distribution:", "repo-detail");
-    const totalLanguageChanges = summary.stats.topLanguages.reduce(
-      (sum, lang) => sum + lang.changes,
-      0,
-    );
-    for (const lang of summary.stats.topLanguages.slice(0, 10)) {
-      const percentage = Math.round(
-        (lang.changes / totalLanguageChanges) * 100,
-      );
-      log.output(
-        `  ${lang.language}: ${lang.changes.toLocaleString()} changes (${percentage}%)`,
-        "repo-detail",
-      );
-    }
-    log.output("", "repo-detail");
-  }
-
-  // File analysis
-  if (summary.stats.topFiles.length > 0) {
-    log.output("📄 Most Changed Files:", "repo-detail");
-    for (const file of summary.stats.topFiles.slice(0, 15)) {
-      const percentage = Math.round(
-        (file.changes / summary.stats.totalFilesChanged) * 100,
-      );
-      log.output(
-        `  ${file.file}: ${file.changes.toLocaleString()} changes (${percentage}%)`,
-        "repo-detail",
-      );
-    }
-    log.output("", "repo-detail");
-  }
-
-  // Time patterns with enhanced analysis
+  // Commit size analysis
   if (repoCommits.length > 0) {
-    const timePatterns = TimePatternCalculator.calculate(repoCommits);
+    const commitSizes = repoCommits.map((c) => c.insertions + c.deletions);
+    commitSizes.sort((a, b) => a - b);
+
+    const small = commitSizes.filter((size) => size <= 50).length;
+    const medium = commitSizes.filter(
+      (size) => size > 50 && size <= 200
+    ).length;
+    const large = commitSizes.filter((size) => size > 200).length;
+
+    log.output("📏 Commit Size Distribution:", "repo-detail");
+    log.output(
+      `  Small commits (≤50 lines): ${small} (${Math.round((small / repoCommits.length) * 100)}%)`,
+      "repo-detail"
+    );
+    log.output(
+      `  Medium commits (51-200 lines): ${medium} (${Math.round((medium / repoCommits.length) * 100)}%)`,
+      "repo-detail"
+    );
+    log.output(
+      `  Large commits (>200 lines): ${large} (${Math.round((large / repoCommits.length) * 100)}%)`,
+      "repo-detail"
+    );
+
+    const median = commitSizes[Math.floor(commitSizes.length / 2)] || 0;
+    log.output(`  Median lines changed: ${median}`, "repo-detail");
+    log.output("", "repo-detail");
+  }
+
+  // Use pre-computed analytics for time patterns
+  if (repoCommits.length > 0 && summary.analytics.timePatterns) {
+    const timePatterns = summary.analytics.timePatterns;
 
     log.output("⏰ Activity Patterns:", "repo-detail");
     log.output(
       `  📊 Total Activity: ${timePatterns.totalCommits} commits analyzed`,
-      "repo-detail",
+      "repo-detail"
     );
     log.output(
       `  🏢 Working Hours (9AM-6PM): ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
-      "repo-detail",
+      "repo-detail"
     );
     log.output(
       `  📅 Weekend Work: ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
-      "repo-detail",
+      "repo-detail"
     );
 
     if (timePatterns.peakHour.commits > 0) {
       log.output(
         `  🎯 Peak Hour: ${timePatterns.peakHour.label} (${timePatterns.peakHour.commits} commits)`,
-        "repo-detail",
+        "repo-detail"
       );
     }
 
     if (timePatterns.earlyBird.commits > 0) {
       log.output(
         `  🌅 Early Bird: ${timePatterns.earlyBird.commits} commits (${timePatterns.earlyBird.percentage}%)`,
-        "repo-detail",
+        "repo-detail"
       );
     }
 
     if (timePatterns.nightOwl.commits > 0) {
       log.output(
         `  🦉 Night Owl: ${timePatterns.nightOwl.commits} commits (${timePatterns.nightOwl.percentage}%)`,
-        "repo-detail",
+        "repo-detail"
       );
     }
 
@@ -330,7 +224,7 @@ function printRepositoryDetailText(
           const workingIndicator = period.isWorkingTime ? "🏢" : "🏠";
           log.output(
             `  ${workingIndicator} ${period.name} (${period.timeRange}): ${period.commits} commits (${period.percentage}%)`,
-            "repo-detail",
+            "repo-detail"
           );
         }
       }
@@ -344,8 +238,8 @@ function printRepositoryDetailText(
  * Print detailed markdown analysis of a specific repository
  */
 function printRepositoryDetailMarkdown(
-  summary: WorkSummary,
-  verbose: boolean,
+  summary: ComprehensiveWorkSummary,
+  verbose: boolean
 ): void {
   if (summary.repositories.length === 0) {
     log.error("No repository found for analysis", undefined, "repo-detail");
@@ -367,43 +261,43 @@ function printRepositoryDetailMarkdown(
   }
   log.output(
     `**Period:** ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}\n`,
-    "repo-detail",
+    "repo-detail"
   );
 
   // Overall statistics
   log.output("## 📊 Repository Statistics\n", "repo-detail");
   log.output(
     `- **Total Commits:** ${repoCommits.length.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
   log.output(
     `- **Files Changed:** ${summary.stats.totalFilesChanged.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
   log.output(
     `- **Lines Added:** +${summary.stats.totalInsertions.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
   log.output(
     `- **Lines Deleted:** -${summary.stats.totalDeletions.toLocaleString()}`,
-    "repo-detail",
+    "repo-detail"
   );
 
   const netChange =
     summary.stats.totalInsertions - summary.stats.totalDeletions;
   log.output(
     `- **Net Change:** ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`,
-    "repo-detail",
+    "repo-detail"
   );
 
   if (repoCommits.length > 0) {
     const avgChangesPerCommit = Math.round(
       (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-        repoCommits.length,
+        repoCommits.length
     );
     log.output(
       `- **Average Changes/Commit:** ${avgChangesPerCommit.toLocaleString()} lines\n`,
-      "repo-detail",
+      "repo-detail"
     );
   }
 
@@ -415,7 +309,7 @@ function printRepositoryDetailMarkdown(
 /**
  * Print repository detail analysis as JSON
  */
-function printRepositoryDetailJSON(summary: WorkSummary): void {
+function printRepositoryDetailJSON(summary: ComprehensiveWorkSummary): void {
   if (summary.repositories.length === 0) {
     log.error("No repository found for analysis", undefined, "repo-detail");
     return;
@@ -468,7 +362,7 @@ function printRepositoryDetailJSON(summary: WorkSummary): void {
         repoCommits.length > 0
           ? Math.round(
               (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-                repoCommits.length,
+                repoCommits.length
             )
           : 0,
     },
@@ -488,6 +382,8 @@ function printRepositoryDetailJSON(summary: WorkSummary): void {
       .slice(0, 10),
     topLanguages: summary.stats.topLanguages,
     topFiles: summary.stats.topFiles,
+    // Include pre-computed analytics
+    analytics: summary.analytics,
     largestCommits: repoCommits
       .map((c) => ({
         hash: c.hash,
