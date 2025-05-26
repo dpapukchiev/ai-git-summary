@@ -12,7 +12,7 @@ import { formatRepositoryDetail } from "../../formatters/repository-detail-forma
  */
 export function addSummaryCommands(
   program: Command,
-  dataAggregator: DataAggregator
+  dataAggregator: DataAggregator,
 ) {
   // Create predefined summary commands
   const summaryPeriods: Array<{ period: PeriodType; description: string }> = [
@@ -30,7 +30,7 @@ export function addSummaryCommands(
       .option(
         "-f, --format <format>",
         "Output format (text, json, markdown)",
-        "text"
+        "text",
       )
       .option("-a, --author <author>", "Filter commits by author name or email")
       .option("--me", "Filter commits by current git user")
@@ -49,7 +49,7 @@ export function addSummaryCommands(
               log.error(
                 "Could not determine current git user. Please set git config user.name or user.email",
                 undefined,
-                "cli"
+                "cli",
               );
               process.exit(1);
             }
@@ -57,7 +57,7 @@ export function addSummaryCommands(
             if (options.verbose) {
               log.info(
                 `🔍 Filtering commits by current user: ${author}`,
-                "cli"
+                "cli",
               );
             }
           }
@@ -66,13 +66,13 @@ export function addSummaryCommands(
           const summary = await dataAggregator.generateWorkSummary(
             timePeriod,
             options.repos,
-            author
+            author,
           );
 
           formatSummary(
             summary,
             options.format as OutputFormat,
-            options.verbose
+            options.verbose,
           );
         } catch (error) {
           log.error("Error generating summary", error as Error, "cli");
@@ -90,7 +90,7 @@ export function addSummaryCommands(
     .option(
       "-f, --format <format>",
       "Output format (text, json, markdown)",
-      "text"
+      "text",
     )
     .option("-a, --author <author>", "Filter commits by author name or email")
     .option("--me", "Filter commits by current git user")
@@ -102,7 +102,7 @@ export function addSummaryCommands(
           log.error(
             "Invalid month count. Please provide a positive number.",
             undefined,
-            "cli"
+            "cli",
           );
           process.exit(1);
         }
@@ -121,7 +121,7 @@ export function addSummaryCommands(
             log.error(
               "Could not determine current git user. Please set git config user.name or user.email",
               undefined,
-              "cli"
+              "cli",
             );
             process.exit(1);
           }
@@ -143,7 +143,7 @@ export function addSummaryCommands(
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
           options.repos,
-          author
+          author,
         );
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);
@@ -163,7 +163,7 @@ export function addSummaryCommands(
     .option(
       "-f, --format <format>",
       "Output format (text, json, markdown)",
-      "text"
+      "text",
     )
     .option("-a, --author <author>", "Filter commits by author name or email")
     .option("--me", "Filter commits by current git user")
@@ -177,7 +177,7 @@ export function addSummaryCommands(
           log.error(
             "Invalid date format. Use YYYY-MM-DD format.",
             undefined,
-            "cli"
+            "cli",
           );
           process.exit(1);
         }
@@ -190,7 +190,7 @@ export function addSummaryCommands(
         if (options.verbose) {
           log.info(
             `📊 Generating summary for ${options.from} to ${options.to}...`,
-            "cli"
+            "cli",
           );
         }
 
@@ -202,7 +202,7 @@ export function addSummaryCommands(
             log.error(
               "Could not determine current git user. Please set git config user.name or user.email",
               undefined,
-              "cli"
+              "cli",
             );
             process.exit(1);
           }
@@ -216,7 +216,7 @@ export function addSummaryCommands(
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
           options.repos,
-          author
+          author,
         );
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);
@@ -234,7 +234,7 @@ export function addSummaryCommands(
     .option(
       "--period <period>",
       "Time period (1week, 1month, 3months, 6months, 1year, ytd)",
-      "1month"
+      "1month",
     )
     .option("--from <date>", "Start date (YYYY-MM-DD) for custom period")
     .option("--to <date>", "End date (YYYY-MM-DD) for custom period")
@@ -243,7 +243,7 @@ export function addSummaryCommands(
     .option(
       "-f, --format <format>",
       "Output format (text, json, markdown)",
-      "text"
+      "text",
     )
     .option("-v, --verbose", "Verbose output")
     .action(async (options) => {
@@ -260,7 +260,7 @@ export function addSummaryCommands(
             log.error(
               "Could not determine current git user. Please set git config user.name or user.email",
               undefined,
-              "cli"
+              "cli",
             );
             process.exit(1);
           }
@@ -280,7 +280,7 @@ export function addSummaryCommands(
             log.error(
               "Invalid date format. Use YYYY-MM-DD format.",
               undefined,
-              "cli"
+              "cli",
             );
             process.exit(1);
           }
@@ -299,14 +299,14 @@ export function addSummaryCommands(
         const summary = await dataAggregator.generateWorkSummary(
           timePeriod,
           [options.repo],
-          author
+          author,
         );
 
         // Format and display the detailed repository analysis
         await formatRepositoryDetail(
           summary,
           options.format as OutputFormat,
-          options.verbose
+          options.verbose,
         );
       } catch (error) {
         log.error("Error analyzing repository", error as Error, "cli");

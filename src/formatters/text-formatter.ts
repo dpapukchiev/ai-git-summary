@@ -25,7 +25,7 @@ class SummaryFormatter {
     log.output("", this.CONTEXT);
     log.output(
       `Period: ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(`Repositories: ${summary.repositories.length}`, this.CONTEXT);
     log.output("", this.CONTEXT);
@@ -35,38 +35,38 @@ class SummaryFormatter {
     log.output("📈 Overall Statistics:", this.CONTEXT);
     log.output(
       `  Commits: ${summary.stats.totalCommits.toLocaleString()}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Files Changed: ${summary.stats.totalFilesChanged.toLocaleString()}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Lines Added: +${summary.stats.totalInsertions.toLocaleString()}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Lines Deleted: -${summary.stats.totalDeletions.toLocaleString()}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
 
     const netChange =
       summary.stats.totalInsertions - summary.stats.totalDeletions;
     log.output(
       `  Net Change: ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(`  Active Days: ${summary.stats.activeDays}`, this.CONTEXT);
     log.output(
       `  Average Commits/Day: ${summary.stats.averageCommitsPerDay}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
 
     const linesPerCommit =
       summary.stats.totalCommits > 0
         ? Math.round(
             (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-              summary.stats.totalCommits
+              summary.stats.totalCommits,
           )
         : 0;
     const commitFrequency =
@@ -76,7 +76,7 @@ class SummaryFormatter {
 
     log.output(
       `  Lines Changed/Commit: ${linesPerCommit.toLocaleString()}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(`  Commits/Active Day: ${commitFrequency}`, this.CONTEXT);
     log.output("", this.CONTEXT);
@@ -85,31 +85,31 @@ class SummaryFormatter {
   static formatTimePatterns(
     timePatterns: TimePatterns,
     totalCommits: number,
-    verbose = false
+    verbose = false,
   ): void {
     log.output("⏰ Time Patterns:", this.CONTEXT);
 
     // Overview with enhanced insights
     log.output(
       `  📊 Total Activity: ${timePatterns.totalCommits} commits analyzed`,
-      this.CONTEXT
+      this.CONTEXT,
     );
 
     log.output(
       `  🏢 Working Hours (9AM-6PM): ${timePatterns.workingHoursCommits} commits (${timePatterns.workingHoursPercent}%)`,
-      this.CONTEXT
+      this.CONTEXT,
     );
 
     log.output(
       `  📅 Weekend Activity: ${timePatterns.weekendCommits} commits (${timePatterns.weekendPercent}%)`,
-      this.CONTEXT
+      this.CONTEXT,
     );
 
     // Peak activity insights
     if (timePatterns.peakHour.commits > 0) {
       log.output(
         `  🎯 Peak Hour: ${timePatterns.peakHour.label} (${timePatterns.peakHour.commits} commits)`,
-        this.CONTEXT
+        this.CONTEXT,
       );
     }
 
@@ -117,14 +117,14 @@ class SummaryFormatter {
     if (timePatterns.earlyBird.commits > 0) {
       log.output(
         `  🌅 Early Bird: ${timePatterns.earlyBird.commits} commits (${timePatterns.earlyBird.percentage}%) between 6-9AM`,
-        this.CONTEXT
+        this.CONTEXT,
       );
     }
 
     if (timePatterns.nightOwl.commits > 0) {
       log.output(
         `  🦉 Night Owl: ${timePatterns.nightOwl.commits} commits (${timePatterns.nightOwl.percentage}%) between 9PM-2AM`,
-        this.CONTEXT
+        this.CONTEXT,
       );
     }
 
@@ -142,7 +142,7 @@ class SummaryFormatter {
 
           log.output(
             `  ${workingIndicator} ${period.name.padEnd(13)} ${period.timeRange.padEnd(9)} │${bar}│ ${period.commits.toString().padStart(3)} commits (${period.percentage.toString().padStart(2)}%)`,
-            this.CONTEXT
+            this.CONTEXT,
           );
         }
       }
@@ -154,11 +154,11 @@ class SummaryFormatter {
       log.output("⏰ Hourly Activity Pattern:", this.CONTEXT);
       log.output(
         "   Hour  │Activity Distribution      │Commits│",
-        this.CONTEXT
+        this.CONTEXT,
       );
       log.output(
         "   ─────┼────────────────────────────┼───────┤",
-        this.CONTEXT
+        this.CONTEXT,
       );
 
       for (const hour of timePatterns.hourlyPattern) {
@@ -166,7 +166,7 @@ class SummaryFormatter {
           const workingHour = hour.hour >= 9 && hour.hour < 18 ? "🏢" : "🏠";
           log.output(
             `   ${hour.label.padEnd(4)} │${hour.bar}│${hour.commits.toString().padStart(6)} │ ${workingHour}`,
-            this.CONTEXT
+            this.CONTEXT,
           );
         }
       }
@@ -174,7 +174,7 @@ class SummaryFormatter {
     } else if (timePatterns.hourlyPattern.length > 0) {
       log.output(
         "💡 Use --verbose to see detailed hourly breakdown",
-        this.CONTEXT
+        this.CONTEXT,
       );
       log.output("", this.CONTEXT);
     }
@@ -185,15 +185,15 @@ class SummaryFormatter {
     log.output(`  Median lines changed: ${metrics.median}`, this.CONTEXT);
     log.output(
       `  Small commits (≤${COMMIT_SIZE_THRESHOLDS.SMALL} lines): ${metrics.small} (${metrics.smallPercentage}%)`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Medium commits (${COMMIT_SIZE_THRESHOLDS.SMALL + 1}-${COMMIT_SIZE_THRESHOLDS.MEDIUM} lines): ${metrics.medium} (${metrics.mediumPercentage}%)`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Large commits (>${COMMIT_SIZE_THRESHOLDS.MEDIUM} lines): ${metrics.large} (${metrics.largePercentage}%)`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output("", this.CONTEXT);
   }
@@ -201,19 +201,19 @@ class SummaryFormatter {
   static formatTopLanguages(
     topLanguages: any[],
     verbose: boolean = false,
-    otherFilesAnalysis?: any
+    otherFilesAnalysis?: any,
   ): void {
     if (!topLanguages || topLanguages.length === 0) return;
 
     const totalChanges = topLanguages.reduce(
       (sum: number, lang: any) => sum + lang.changes,
-      0
+      0,
     );
     log.output("💻 Top Languages:", this.CONTEXT);
 
     // Show more languages if we have good detection (less "Other" dominance)
     const otherLanguage = topLanguages.find(
-      (lang) => lang.language === "Other"
+      (lang) => lang.language === "Other",
     );
     const hasOtherDominance =
       otherLanguage && otherLanguage.changes / totalChanges > 0.5;
@@ -227,7 +227,7 @@ class SummaryFormatter {
       const bar = "█".repeat(Math.max(1, Math.round(percentage / 5)));
       log.output(
         `  ${lang.language.padEnd(12)} ${lang.changes.toLocaleString().padStart(6)} changes (${percentage}%) ${bar}`,
-        this.CONTEXT
+        this.CONTEXT,
       );
     }
 
@@ -236,25 +236,25 @@ class SummaryFormatter {
       log.output("", this.CONTEXT);
       log.output(
         "💡 Large 'Other' category detected. This usually includes:",
-        this.CONTEXT
+        this.CONTEXT,
       );
       log.output(
         "   • Binary files (images, archives, executables)",
-        this.CONTEXT
+        this.CONTEXT,
       );
       log.output(
         "   • Generated files (build artifacts, dependencies)",
-        this.CONTEXT
+        this.CONTEXT,
       );
       log.output(
         "   • Files without extensions or with uncommon extensions",
-        this.CONTEXT
+        this.CONTEXT,
       );
 
       if (!verbose) {
         log.output(
           "   • Use --verbose flag for detailed breakdown",
-          this.CONTEXT
+          this.CONTEXT,
         );
       } else if (otherFilesAnalysis) {
         log.output("", this.CONTEXT);
@@ -263,12 +263,12 @@ class SummaryFormatter {
         if (otherFilesAnalysis.commonExtensions?.length > 0) {
           log.output(
             "   📋 Most common unrecognized extensions:",
-            this.CONTEXT
+            this.CONTEXT,
           );
           for (const ext of otherFilesAnalysis.commonExtensions.slice(0, 5)) {
             log.output(
               `      ${ext.extension}: ${ext.count} files`,
-              this.CONTEXT
+              this.CONTEXT,
             );
           }
         }
@@ -279,7 +279,7 @@ class SummaryFormatter {
             const fileName = file.filePath.split("/").pop() || file.filePath;
             log.output(
               `      ${fileName}: ${file.changes.toLocaleString()} changes`,
-              this.CONTEXT
+              this.CONTEXT,
             );
           }
         }
@@ -291,13 +291,13 @@ class SummaryFormatter {
 
   static formatRepositoryBreakdown(
     repositoryBreakdown: RepositoryContribution[],
-    verbose: boolean
+    verbose: boolean,
   ): void {
     if (!verbose || repositoryBreakdown.length <= 1) return;
 
     // Only show repositories with contributions
     const activeRepos = repositoryBreakdown.filter(
-      (repo) => repo.commits > 0 || repo.linesChanged > 0
+      (repo) => repo.commits > 0 || repo.linesChanged > 0,
     );
 
     if (activeRepos.length === 0) {
@@ -306,14 +306,14 @@ class SummaryFormatter {
 
     log.output(
       "📁 Repository Breakdown (sorted by contributions):",
-      this.CONTEXT
+      this.CONTEXT,
     );
     for (const repo of activeRepos) {
       log.output(`  📂 ${repo.name}`, this.CONTEXT);
       log.output(`     ${repo.path}`, this.CONTEXT);
       log.output(
         `     ${repo.commits} commits, ${repo.linesChanged.toLocaleString()} lines changed`,
-        this.CONTEXT
+        this.CONTEXT,
       );
       if (repo.remoteUrl) {
         log.output(`     🔗 ${repo.remoteUrl}`, this.CONTEXT);
@@ -330,7 +330,7 @@ class SummaryFormatter {
       const activity = file.changes === 1 ? "change" : "changes";
       log.output(
         `  📝 ${file.file} (${file.changes} ${activity})`,
-        this.CONTEXT
+        this.CONTEXT,
       );
     }
     log.output("", this.CONTEXT);
@@ -340,22 +340,22 @@ class SummaryFormatter {
     log.output("🔥 Activity Insights:", this.CONTEXT);
     log.output(
       `  Longest streak: ${metrics.longestStreak} consecutive days`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Most productive day: ${metrics.mostProductiveDay}`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output(
       `  Consistency score: ${metrics.consistencyScore}%`,
-      this.CONTEXT
+      this.CONTEXT,
     );
     log.output("", this.CONTEXT);
   }
 
   static formatWeeklyPattern(
     weeklyPattern: WeeklyPattern[],
-    verbose: boolean
+    verbose: boolean,
   ): void {
     if (!verbose || weeklyPattern.length === 0) return;
 
@@ -363,7 +363,7 @@ class SummaryFormatter {
     for (const day of weeklyPattern) {
       log.output(
         `  ${day.dayName} │${day.bar}│ ${day.commits} commits`,
-        this.CONTEXT
+        this.CONTEXT,
       );
     }
     log.output("", this.CONTEXT);
@@ -374,7 +374,7 @@ class SummaryFormatter {
 
     if (achievements.length > 0) {
       achievements.forEach((achievement) =>
-        log.output(`  ${achievement}`, this.CONTEXT)
+        log.output(`  ${achievement}`, this.CONTEXT),
       );
     } else {
       log.output("  Keep coding to unlock achievements! 💪", this.CONTEXT);
@@ -390,7 +390,7 @@ class SummaryFormatter {
  */
 export function printTextSummary(
   summary: ComprehensiveWorkSummary,
-  verbose = false
+  verbose = false,
 ): void {
   SummaryFormatter.formatHeader(summary);
   SummaryFormatter.formatOverallStats(summary);
@@ -402,7 +402,7 @@ export function printTextSummary(
     SummaryFormatter.formatTimePatterns(
       analytics.timePatterns,
       summary.commits.length,
-      verbose
+      verbose,
     );
 
     SummaryFormatter.formatCommitSizes(analytics.commitSizeMetrics);
@@ -410,12 +410,12 @@ export function printTextSummary(
     SummaryFormatter.formatTopLanguages(
       summary.stats.topLanguages,
       verbose,
-      summary.stats.otherFilesAnalysis
+      summary.stats.otherFilesAnalysis,
     );
 
     SummaryFormatter.formatRepositoryBreakdown(
       analytics.repositoryBreakdown,
-      verbose
+      verbose,
     );
     SummaryFormatter.formatTopFiles(summary.stats.topFiles, verbose);
 

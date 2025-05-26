@@ -78,7 +78,7 @@ export class AnalyticsEngine {
     // Activity insights (streaks, productivity, consistency)
     const activityMetrics = ActivityCalculator.calculateMetrics(
       commits,
-      period
+      period,
     );
 
     // Weekly activity pattern
@@ -87,14 +87,14 @@ export class AnalyticsEngine {
     // Repository contribution breakdown
     const repositoryBreakdown = this.calculateRepositoryBreakdown(
       repositories,
-      commits
+      commits,
     );
 
     // Achievements based on all computed metrics
     const achievements = AchievementGenerator.generate(
       stats,
       timePatterns,
-      repositories
+      repositories,
     );
 
     return {
@@ -112,7 +112,7 @@ export class AnalyticsEngine {
    */
   private static calculateRepositoryBreakdown(
     repositories: any[],
-    commits: any[]
+    commits: any[],
   ): RepositoryContribution[] {
     return (
       repositories
@@ -120,11 +120,11 @@ export class AnalyticsEngine {
           const repoCommits = commits.filter((c) => c.repoId === repo.id);
           const totalInsertions = repoCommits.reduce(
             (sum, c) => sum + c.insertions,
-            0
+            0,
           );
           const totalDeletions = repoCommits.reduce(
             (sum, c) => sum + c.deletions,
-            0
+            0,
           );
 
           return {

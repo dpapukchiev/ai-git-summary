@@ -18,7 +18,7 @@ export type OutputFormat = "text" | "json" | "markdown";
 export function formatSummary(
   summary: WorkSummary,
   format: OutputFormat,
-  verbose: boolean = false
+  verbose: boolean = false,
 ) {
   // Compute comprehensive analytics once
   const comprehensiveSummary = AnalyticsEngine.computeAnalytics(summary);

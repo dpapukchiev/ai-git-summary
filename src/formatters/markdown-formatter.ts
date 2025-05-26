@@ -9,59 +9,59 @@ import { ComprehensiveWorkSummary } from "../core/analytics-engine";
 export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
   log.output(
     `# 📊 Work Summary: ${summary.period.label}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `**Period:** ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `**Repositories:** ${summary.repositories.length}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   log.output("## 📈 Overall Statistics\n", "markdown-formatter");
   log.output(
     `- **Total Commits:** ${summary.stats.totalCommits.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Files Changed:** ${summary.stats.totalFilesChanged.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Lines Added:** +${summary.stats.totalInsertions.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Lines Deleted:** -${summary.stats.totalDeletions.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   const netChange =
     summary.stats.totalInsertions - summary.stats.totalDeletions;
   log.output(
     `- **Net Change:** ${netChange > 0 ? "+" : ""}${netChange.toLocaleString()} lines`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Active Days:** ${summary.stats.activeDays}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
   log.output(
     `- **Average Commits/Day:** ${summary.stats.averageCommitsPerDay}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   const linesPerCommit =
     summary.stats.totalCommits > 0
       ? Math.round(
           (summary.stats.totalInsertions + summary.stats.totalDeletions) /
-            summary.stats.totalCommits
+            summary.stats.totalCommits,
         )
       : 0;
   log.output(
     `- **Lines Changed/Commit:** ${linesPerCommit.toLocaleString()}`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   const commitFrequency =
@@ -70,7 +70,7 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
       : "0";
   log.output(
     `- **Commits/Active Day:** ${commitFrequency}\n`,
-    "markdown-formatter"
+    "markdown-formatter",
   );
 
   // Use pre-computed analytics
@@ -82,31 +82,31 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
 
     log.output(
       `- **Working Hours (9AM-6PM):** ${analytics.timePatterns.workingHoursCommits} commits (${analytics.timePatterns.workingHoursPercent}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Weekend Activity:** ${analytics.timePatterns.weekendCommits} commits (${analytics.timePatterns.weekendPercent}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
 
     if (analytics.timePatterns.peakHour.commits > 0) {
       log.output(
         `- **Peak Hour:** ${analytics.timePatterns.peakHour.label} (${analytics.timePatterns.peakHour.commits} commits)`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
 
     if (analytics.timePatterns.earlyBird.commits > 0) {
       log.output(
         `- **Early Bird:** ${analytics.timePatterns.earlyBird.commits} commits (${analytics.timePatterns.earlyBird.percentage}%) between 6-9AM`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
 
     if (analytics.timePatterns.nightOwl.commits > 0) {
       log.output(
         `- **Night Owl:** ${analytics.timePatterns.nightOwl.commits} commits (${analytics.timePatterns.nightOwl.percentage}%) between 9PM-2AM`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
 
@@ -117,7 +117,7 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
       log.output("### 📋 Activity by Time Period\n", "markdown-formatter");
       log.output(
         "| Period | Time Range | Commits | Percentage | Type |\n|--------|------------|---------|------------|------|",
-        "markdown-formatter"
+        "markdown-formatter",
       );
 
       for (const period of analytics.timePatterns.timePeriods) {
@@ -128,7 +128,7 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
 
           log.output(
             `| ${period.name} | ${period.timeRange} | ${period.commits} | ${period.percentage}% ${bar} | ${typeIcon} |`,
-            "markdown-formatter"
+            "markdown-formatter",
           );
         }
       }
@@ -137,13 +137,13 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
 
     // Hourly heatmap (condensed for markdown)
     const activeHours = analytics.timePatterns.hourlyPattern.filter(
-      (h) => h.commits > 0
+      (h) => h.commits > 0,
     );
     if (activeHours.length > 0) {
       log.output("### ⏰ Hourly Activity Heatmap\n", "markdown-formatter");
       log.output(
         "| Hour | Commits | Activity |\n|------|---------|----------|",
-        "markdown-formatter"
+        "markdown-formatter",
       );
 
       for (const hour of activeHours.slice(0, 12)) {
@@ -151,7 +151,7 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
         const workingHour = hour.hour >= 9 && hour.hour < 18 ? "🏢" : "🏠";
         log.output(
           `| ${hour.label} | ${hour.commits} | ${hour.bar} ${workingHour} |`,
-          "markdown-formatter"
+          "markdown-formatter",
         );
       }
       log.output("", "markdown-formatter");
@@ -163,19 +163,19 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
     log.output("## 📏 Commit Sizes\n", "markdown-formatter");
     log.output(
       `- **Median lines changed:** ${analytics.commitSizeMetrics.median}`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Small commits (≤50 lines):** ${analytics.commitSizeMetrics.small} (${analytics.commitSizeMetrics.smallPercentage}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Medium commits (51-200 lines):** ${analytics.commitSizeMetrics.medium} (${analytics.commitSizeMetrics.mediumPercentage}%)`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Large commits (>200 lines):** ${analytics.commitSizeMetrics.large} (${analytics.commitSizeMetrics.largePercentage}%)\n`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
   }
 
@@ -184,12 +184,12 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
     log.output("## 💻 Top Languages\n", "markdown-formatter");
     log.output(
       "| Language | Changes | Percentage |\n|----------|---------|------------|",
-      "markdown-formatter"
+      "markdown-formatter",
     );
 
     const totalChanges = summary.stats.topLanguages.reduce(
       (sum, lang) => sum + lang.changes,
-      0
+      0,
     );
 
     for (const lang of summary.stats.topLanguages.slice(0, 8)) {
@@ -198,7 +198,7 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
       const bar = "█".repeat(Math.max(1, Math.round(percentage / 5)));
       log.output(
         `| ${lang.language} | ${lang.changes.toLocaleString()} | ${percentage}% ${bar} |`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
     log.output("", "markdown-formatter");
@@ -209,15 +209,15 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
     log.output("## 🔥 Activity Insights\n", "markdown-formatter");
     log.output(
       `- **Longest streak:** ${analytics.activityMetrics.longestStreak} consecutive days`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Most productive day:** ${analytics.activityMetrics.mostProductiveDay}`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
     log.output(
       `- **Consistency score:** ${analytics.activityMetrics.consistencyScore}%\n`,
-      "markdown-formatter"
+      "markdown-formatter",
     );
   }
 
@@ -226,13 +226,13 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
     log.output("## 📅 Weekly Activity Pattern\n", "markdown-formatter");
     log.output(
       "| Day | Commits | Activity |\n|-----|---------|----------|",
-      "markdown-formatter"
+      "markdown-formatter",
     );
 
     for (const day of analytics.weeklyPattern) {
       log.output(
         `| ${day.dayName} | ${day.commits} | ${day.bar} |`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
     log.output("", "markdown-formatter");
@@ -255,14 +255,14 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
     log.output("## 📁 Repository Breakdown\n", "markdown-formatter");
     log.output(
       "| Repository | Commits | Lines Changed | Remote |\n|------------|---------|---------------|--------|",
-      "markdown-formatter"
+      "markdown-formatter",
     );
 
     for (const repo of analytics.repositoryBreakdown) {
       const remote = repo.remoteUrl ? `[🔗](${repo.remoteUrl})` : "N/A";
       log.output(
         `| ${repo.name} | ${repo.commits} | ${repo.linesChanged.toLocaleString()} | ${remote} |`,
-        "markdown-formatter"
+        "markdown-formatter",
       );
     }
     log.output("", "markdown-formatter");
