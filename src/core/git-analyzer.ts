@@ -1,14 +1,14 @@
-import { simpleGit, SimpleGit } from 'simple-git';
 import fs from 'fs';
 import path from 'path';
-import { Repository } from '../types';
+import { simpleGit, SimpleGit } from 'simple-git';
 import { DatabaseManager } from '../storage/database';
+import { Repository } from '../types';
 import { log } from '../utils/logger';
-import { CommitProcessor } from './commit-processor';
-import { CommitFetcher } from './commit-fetcher';
-import { RepositoryDiscovery } from './repository-discovery';
-import { GitRemoteHandler } from './git-remote-handler';
 import { processInParallel, ProcessResult } from '../utils/parallel-processor';
+import { CommitFetcher } from './commit-fetcher';
+import { CommitProcessor } from './commit-processor';
+import { GitRemoteHandler } from './git-remote-handler';
+import { RepositoryDiscovery } from './repository-discovery';
 
 export class GitAnalyzer {
   private db: DatabaseManager;
@@ -49,7 +49,6 @@ export class GitAnalyzer {
 
     if (commits.length > 0) {
       const startTime = Date.now();
-      let processed = 0;
 
       log.output(
         `Processing commits with concurrency: ${this.concurrency}`,
@@ -74,8 +73,7 @@ export class GitAnalyzer {
           }
         },
         this.concurrency,
-        (completed, total, commit, success) => {
-          processed = completed;
+        (completed, total, _commit, _success) => {
           this.logProgress(completed, total, startTime);
         }
       );
@@ -174,7 +172,7 @@ export class GitAnalyzer {
   async discoverRepositoriesByOrganization(
     searchPaths: string[],
     organizationName: string,
-    maxDepth: number = 3
+    _maxDepth: number = 3
   ): Promise<Repository[]> {
     log.output(
       `🔍 Starting organization discovery for: ${organizationName}`,
