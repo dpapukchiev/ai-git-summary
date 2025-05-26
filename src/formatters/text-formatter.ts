@@ -23,12 +23,15 @@ class SummaryFormatter {
   private static readonly CONTEXT = "text-formatter";
 
   static formatHeader(summary: any): void {
-    log.output(`\n📊 Work Summary: ${summary.period.label}\n`, this.CONTEXT);
+    log.output("", this.CONTEXT);
+    log.output(`📊 Work Summary: ${summary.period.label}`, this.CONTEXT);
+    log.output("", this.CONTEXT);
     log.output(
       `Period: ${DateUtils.formatDate(summary.period.startDate)} to ${DateUtils.formatDate(summary.period.endDate)}`,
       this.CONTEXT
     );
-    log.output(`Repositories: ${summary.repositories.length}\n`, this.CONTEXT);
+    log.output(`Repositories: ${summary.repositories.length}`, this.CONTEXT);
+    log.output("", this.CONTEXT);
   }
 
   static formatOverallStats(summary: any): void {
@@ -78,7 +81,8 @@ class SummaryFormatter {
       `  Lines Changed/Commit: ${linesPerCommit.toLocaleString()}`,
       this.CONTEXT
     );
-    log.output(`  Commits/Active Day: ${commitFrequency}\n`, this.CONTEXT);
+    log.output(`  Commits/Active Day: ${commitFrequency}`, this.CONTEXT);
+    log.output("", this.CONTEXT);
   }
 
   static formatTimePatterns(
@@ -191,9 +195,10 @@ class SummaryFormatter {
       this.CONTEXT
     );
     log.output(
-      `  Large commits (>${COMMIT_SIZE_THRESHOLDS.MEDIUM} lines): ${metrics.large} (${metrics.largePercentage}%)\n`,
+      `  Large commits (>${COMMIT_SIZE_THRESHOLDS.MEDIUM} lines): ${metrics.large} (${metrics.largePercentage}%)`,
       this.CONTEXT
     );
+    log.output("", this.CONTEXT);
   }
 
   static formatTopLanguages(
@@ -367,9 +372,10 @@ class SummaryFormatter {
       this.CONTEXT
     );
     log.output(
-      `  Consistency score: ${metrics.consistencyScore}%\n`,
+      `  Consistency score: ${metrics.consistencyScore}%`,
       this.CONTEXT
     );
+    log.output("", this.CONTEXT);
   }
 
   static formatWeeklyPattern(
@@ -398,6 +404,7 @@ class SummaryFormatter {
     } else {
       log.output("  Keep coding to unlock achievements! 💪", this.CONTEXT);
     }
+    log.output("", this.CONTEXT);
     log.output("", this.CONTEXT);
   }
 }
