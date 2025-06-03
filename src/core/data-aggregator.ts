@@ -1,269 +1,32 @@
 import { DatabaseManager } from '../storage/database';
-import { Commit, Repository, TimePeriod, WorkSummary } from '../types';
-import { DateUtils } from '../utils/date-utils';
-import { LanguageDetector } from '../utils/language-detector';
+import {
+  AISummaryOptions,
+  AISummaryResult,
+  Commit,
+  NarrativeStyle,
+  Repository,
+  SummaryContext,
+  TimePeriod,
+  WorkSummary,
+} from '../types';
+import { log } from '../utils/logger';
+import { AISummaryService } from './ai-summary-service';
+import { RepositoryFilter } from './repository-filter';
+import { StatsCalculator } from './stats-calculator';
 
-// Constants for better maintainability
-const FILE_FILTERING_RULES = {
-  MIN_LENGTH: 3,
-  MAX_LENGTH: 100,
-  EXCLUDED_PREFIXES: ['http'],
-  EXCLUDED_CHARACTERS: ['@'],
-} as const;
-
-// Single Responsibility: Language detection and statistics
-class LanguageStatsCalculator {
-  constructor(private db: DatabaseManager) {}
-
-  calculateFromCommits(commits: Commit[]): Map<string, number> {
-    // Get file changes only for the specific commits we're analyzing
-    if (commits.length === 0) {
-      return new Map();
-    }
-
-    // Get commit IDs from the filtered commits
-    const commitIds = commits
-      .map(c => c.id)
-      .filter(id => id !== undefined) as number[];
-
-    if (commitIds.length === 0) {
-      return new Map();
-    }
-
-    // Get file changes only for these specific commits
-    const fileChanges = this.getFileChangesForCommits(commitIds);
-
-    // Aggregate changes by file path
-    const filePathStats = new Map<string, number>();
-    for (const change of fileChanges) {
-      const currentCount = filePathStats.get(change.filePath) || 0;
-      const changeAmount = change.insertions + change.deletions;
-      filePathStats.set(change.filePath, currentCount + changeAmount);
-    }
-
-    // Convert to language statistics using the enhanced detector
-    const filePathArray = Array.from(filePathStats.entries()).map(
-      ([filePath, changes]) => ({ filePath, changes })
-    );
-
-    return LanguageDetector.calculateLanguageStats(filePathArray);
-  }
-
-  /**
-   * Get file changes for specific commits
-   */
-  private getFileChangesForCommits(commitIds: number[]) {
-    const allFileChanges = [];
-    for (const commitId of commitIds) {
-      const changes = this.db.getFileChangesByCommit(commitId);
-      allFileChanges.push(...changes);
-    }
-    return allFileChanges;
-  }
-
-  /**
-   * Get detailed breakdown of file changes for debugging purposes
-   */
-  getFilePathBreakdown(
-    commits: Commit[]
-  ): Array<{ filePath: string; changes: number }> {
-    if (commits.length === 0) {
-      return [];
-    }
-
-    // Get commit IDs from the filtered commits
-    const commitIds = commits
-      .map(c => c.id)
-      .filter(id => id !== undefined) as number[];
-
-    if (commitIds.length === 0) {
-      return [];
-    }
-
-    // Get file changes only for these specific commits
-    const fileChanges = this.getFileChangesForCommits(commitIds);
-
-    const filePathStats = new Map<string, number>();
-    for (const change of fileChanges) {
-      const currentCount = filePathStats.get(change.filePath) || 0;
-      const changeAmount = change.insertions + change.deletions;
-      filePathStats.set(change.filePath, currentCount + changeAmount);
-    }
-
-    return Array.from(filePathStats.entries()).map(([filePath, changes]) => ({
-      filePath,
-      changes,
-    }));
-  }
-}
-
-// Single Responsibility: File statistics calculation
-class FileStatsCalculator {
-  private fileStats = new Map<string, number>();
-
-  calculateFromCommits(commits: Commit[]): Map<string, number> {
-    this.fileStats.clear();
-
-    for (const commit of commits) {
-      this.extractFilesFromCommitMessage(commit.message);
-    }
-
-    return new Map(this.fileStats);
-  }
-
-  private extractFilesFromCommitMessage(message: string): void {
-    const fileMatches = this.findFilePatterns(message);
-
-    for (const match of fileMatches) {
-      if (this.isValidFilePath(match)) {
-        this.incrementFileStats(match.toLowerCase());
-      }
-    }
-  }
-
-  private findFilePatterns(message: string): string[] {
-    const patterns = [
-      /([a-zA-Z0-9_\-/]+\.[a-zA-Z0-9]+)/g,
-      /([a-zA-Z0-9_-]+\/[a-zA-Z0-9_\-/.]+)/g,
-    ];
-
-    const allMatches: string[] = [];
-    for (const pattern of patterns) {
-      const matches = message.match(pattern);
-      if (matches) {
-        allMatches.push(...matches);
-      }
-    }
-
-    return allMatches;
-  }
-
-  private isValidFilePath(filePath: string): boolean {
-    return (
-      filePath.includes('.') &&
-      filePath.length >= FILE_FILTERING_RULES.MIN_LENGTH &&
-      filePath.length <= FILE_FILTERING_RULES.MAX_LENGTH &&
-      !this.hasExcludedPrefixes(filePath) &&
-      !this.hasExcludedCharacters(filePath)
-    );
-  }
-
-  private hasExcludedPrefixes(filePath: string): boolean {
-    return FILE_FILTERING_RULES.EXCLUDED_PREFIXES.some(prefix =>
-      filePath.startsWith(prefix)
-    );
-  }
-
-  private hasExcludedCharacters(filePath: string): boolean {
-    return FILE_FILTERING_RULES.EXCLUDED_CHARACTERS.some(char =>
-      filePath.includes(char)
-    );
-  }
-
-  private incrementFileStats(normalizedPath: string): void {
-    const currentCount = this.fileStats.get(normalizedPath) || 0;
-    this.fileStats.set(normalizedPath, currentCount + 1);
-  }
-}
-
-// Single Responsibility: Repository filtering logic
-class RepositoryFilter {
-  constructor(private db: DatabaseManager) {}
-
-  getFilteredRepositories(repositoryPaths?: string[]) {
-    const allRepositories = this.db.getAllRepositories();
-
-    if (!repositoryPaths || repositoryPaths.length === 0) {
-      return allRepositories;
-    }
-
-    return allRepositories.filter(repo =>
-      this.matchesAnyPath(repo, repositoryPaths)
-    );
-  }
-
-  private matchesAnyPath(repo: Repository, paths: string[]): boolean {
-    return paths.some(path => repo.path.includes(path) || repo.name === path);
-  }
-
-  extractRepositoryIds(repositories: Repository[]): number[] {
-    return repositories.map(repo => repo.id!).filter(id => id !== undefined);
-  }
-}
-
-// Single Responsibility: Statistics calculation
-class CommitStatsCalculator {
-  constructor(private db: DatabaseManager) {}
-
-  calculateStats(commits: Commit[], period: TimePeriod) {
-    const basicStats = this.calculateBasicStats(commits);
-    const timeStats = this.calculateTimeStats(commits, period);
-    const languageCalculator = new LanguageStatsCalculator(this.db);
-    const languageStats = languageCalculator.calculateFromCommits(commits);
-
-    // Always include debug info for comprehensive analysis
-    const filePathBreakdown = languageCalculator.getFilePathBreakdown(commits);
-    const otherFilesAnalysis =
-      LanguageDetector.analyzeOtherFiles(filePathBreakdown);
-
-    const fileStats = new FileStatsCalculator().calculateFromCommits(commits);
-
-    return {
-      ...basicStats,
-      ...timeStats,
-      topLanguages: this.formatTopLanguages(languageStats, 10),
-      topFiles: this.formatTopFiles(fileStats, 20),
-      otherFilesAnalysis,
-    };
-  }
-
-  private calculateBasicStats(commits: Commit[]) {
-    return {
-      totalCommits: commits.length,
-      totalFilesChanged: commits.reduce((sum, c) => sum + c.filesChanged, 0),
-      totalInsertions: commits.reduce((sum, c) => sum + c.insertions, 0),
-      totalDeletions: commits.reduce((sum, c) => sum + c.deletions, 0),
-    };
-  }
-
-  private calculateTimeStats(commits: Commit[], period: TimePeriod) {
-    const activeDays = DateUtils.getActiveDays(commits);
-    const periodDays = DateUtils.getDaysInPeriod(
-      period.startDate,
-      period.endDate
-    );
-    const averageCommitsPerDay =
-      periodDays > 0 ? commits.length / periodDays : 0;
-
-    return {
-      activeDays,
-      averageCommitsPerDay: Math.round(averageCommitsPerDay * 100) / 100,
-    };
-  }
-
-  private formatTopLanguages(
-    languageStats: Map<string, number>,
-    limit: number
-  ) {
-    return LanguageDetector.filterAndSortLanguages(languageStats, limit);
-  }
-
-  private formatTopFiles(fileStats: Map<string, number>, limit: number) {
-    return Array.from(fileStats.entries())
-      .map(([file, changes]) => ({ file, changes }))
-      .sort((a, b) => b.changes - a.changes)
-      .slice(0, limit);
-  }
-}
-
-// Main class with focused responsibility: Data aggregation orchestration
+/**
+ * Aggregates data from multiple repositories and generates comprehensive work summaries
+ * Now includes AI-powered narrative generation capabilities
+ */
 export class DataAggregator {
   private repositoryFilter: RepositoryFilter;
-  private statsCalculator: CommitStatsCalculator;
+  private statsCalculator: StatsCalculator;
+  private aiService: AISummaryService;
 
   constructor(private db: DatabaseManager) {
     this.repositoryFilter = new RepositoryFilter(db);
-    this.statsCalculator = new CommitStatsCalculator(db);
+    this.statsCalculator = new StatsCalculator(db);
+    this.aiService = new AISummaryService();
   }
 
   async generateWorkSummary(
@@ -283,44 +46,164 @@ export class DataAggregator {
     };
   }
 
-  async getCommitTrends(
+  /**
+   * Generate work summary with AI-powered narrative
+   */
+  async generateWorkSummaryWithAI(
     period: TimePeriod,
     repositoryPaths?: string[],
-    author?: string
-  ): Promise<Map<string, number>> {
-    const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
-    const commits = this.getCommitsForPeriod(period, repositories, author);
+    author?: string,
+    aiOptions?: Partial<AISummaryOptions>
+  ): Promise<WorkSummary> {
+    // Generate the base work summary
+    const workSummary = await this.generateWorkSummary(
+      period,
+      repositoryPaths,
+      author
+    );
 
-    return DateUtils.getCommitsByDay(commits);
+    // Add AI summary if available and requested
+    if (this.aiService.isAvailable()) {
+      try {
+        const fullAIOptions = this.buildAIOptions(aiOptions);
+        const aiResult = await this.aiService.generateSummary(
+          workSummary,
+          fullAIOptions
+        );
+
+        log.info(
+          `AI summary generated successfully (${aiResult.tokensUsed} tokens)`,
+          'data-aggregator'
+        );
+
+        return {
+          ...workSummary,
+          aiSummary: aiResult.narrative,
+        };
+      } catch (error) {
+        log.warn(
+          `Failed to generate AI summary: ${(error as Error).message}`,
+          'data-aggregator'
+        );
+        // Return work summary without AI summary on error
+        return workSummary;
+      }
+    } else {
+      log.info(
+        'AI summary service not available, returning standard summary',
+        'data-aggregator'
+      );
+      return workSummary;
+    }
   }
 
-  async getAuthorStats(
+  /**
+   * Generate AI summary for different contexts
+   */
+  async generateAISummaryForContext(
     period: TimePeriod,
+    context: SummaryContext,
     repositoryPaths?: string[],
-    author?: string
-  ): Promise<
-    Array<{
-      author: string;
-      commits: number;
-      insertions: number;
-      deletions: number;
-    }>
-  > {
-    const repositories = this.getRepositoriesForAnalysis(repositoryPaths);
-    const commits = this.getCommitsForPeriod(period, repositories, author);
-
-    return this.calculateAuthorStatistics(commits);
-  }
-
-  private getRepositoriesForAnalysis(repositoryPaths?: string[]) {
-    const repositories =
-      this.repositoryFilter.getFilteredRepositories(repositoryPaths);
-
-    if (repositories.length === 0) {
-      throw new Error('No repositories found for analysis');
+    author?: string,
+    style: NarrativeStyle = 'professional'
+  ): Promise<AISummaryResult | null> {
+    if (!this.aiService.isAvailable()) {
+      log.warn('AI summary service not available', 'data-aggregator');
+      return null;
     }
 
-    return repositories;
+    try {
+      const workSummary = await this.generateWorkSummary(
+        period,
+        repositoryPaths,
+        author
+      );
+      const aiOptions = this.getContextSpecificOptions(context, style);
+
+      return await this.aiService.generateSummary(workSummary, aiOptions);
+    } catch (error) {
+      log.error(
+        'Failed to generate AI summary for context',
+        error as Error,
+        'data-aggregator'
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Check if AI summaries are available
+   */
+  isAIAvailable(): boolean {
+    return this.aiService.isAvailable();
+  }
+
+  /**
+   * Build complete AI options with defaults
+   */
+  private buildAIOptions(
+    options?: Partial<AISummaryOptions>
+  ): AISummaryOptions {
+    return {
+      context: options?.context || 'general',
+      style: options?.style || 'professional',
+      maxLength: options?.maxLength || 1000,
+      includeMetrics: options?.includeMetrics ?? true,
+      groupByFeatures: options?.groupByFeatures ?? true,
+    };
+  }
+
+  /**
+   * Get context-specific AI options
+   */
+  private getContextSpecificOptions(
+    context: SummaryContext,
+    style: NarrativeStyle
+  ): AISummaryOptions {
+    const baseOptions = {
+      context,
+      style,
+      includeMetrics: true,
+      groupByFeatures: true,
+    };
+
+    switch (context) {
+      case 'standup':
+        return {
+          ...baseOptions,
+          maxLength: 300,
+          groupByFeatures: false, // Focus on chronological order for standups
+        };
+
+      case 'retrospective':
+        return {
+          ...baseOptions,
+          maxLength: 800,
+          groupByFeatures: true, // Group by features for better analysis
+        };
+
+      case 'performance-review':
+        return {
+          ...baseOptions,
+          maxLength: 1500,
+          groupByFeatures: true, // Show comprehensive feature work
+        };
+
+      case 'general':
+      default:
+        return {
+          ...baseOptions,
+          maxLength: 1000,
+          groupByFeatures: true,
+        };
+    }
+  }
+
+  private getRepositoriesForAnalysis(repositoryPaths?: string[]): Repository[] {
+    if (repositoryPaths && repositoryPaths.length > 0) {
+      return this.repositoryFilter.filterByPaths(repositoryPaths);
+    }
+    return this.repositoryFilter.getAll();
   }
 
   private getCommitsForPeriod(
@@ -328,41 +211,16 @@ export class DataAggregator {
     repositories: Repository[],
     author?: string
   ): Commit[] {
-    const repoIds = this.repositoryFilter.extractRepositoryIds(repositories);
+    if (repositories.length === 0) {
+      return [];
+    }
+
+    const repositoryIds = repositories.map(r => r.id!).filter(Boolean);
     return this.db.getCommitsByDateRange(
       period.startDate,
       period.endDate,
-      repoIds,
+      repositoryIds,
       author
     );
-  }
-
-  private calculateAuthorStatistics(commits: Commit[]) {
-    const authorStats = new Map<
-      string,
-      {
-        commits: number;
-        insertions: number;
-        deletions: number;
-      }
-    >();
-
-    for (const commit of commits) {
-      const currentStats = authorStats.get(commit.author) || {
-        commits: 0,
-        insertions: 0,
-        deletions: 0,
-      };
-
-      authorStats.set(commit.author, {
-        commits: currentStats.commits + 1,
-        insertions: currentStats.insertions + commit.insertions,
-        deletions: currentStats.deletions + commit.deletions,
-      });
-    }
-
-    return Array.from(authorStats.entries())
-      .map(([author, stats]) => ({ author, ...stats }))
-      .sort((a, b) => b.commits - a.commits);
   }
 }
