@@ -1,3 +1,5 @@
+import type { Database } from 'better-sqlite3';
+
 export interface Repository {
   id?: number;
   name: string;
@@ -77,3 +79,12 @@ export type PeriodType =
   | '1year'
   | 'ytd'
   | 'custom';
+
+export type OutputFormat = 'text' | 'json' | 'markdown';
+
+export interface DatabaseConfig {
+  database: Database;
+}
+
+// Export AI-related types
+export * from './ai-types';
