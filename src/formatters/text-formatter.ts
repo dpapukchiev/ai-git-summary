@@ -393,6 +393,51 @@ class SummaryFormatter {
     log.output('', this.CONTEXT);
     log.output('', this.CONTEXT);
   }
+
+  static formatAISummary(aiSummary: string): void {
+    log.output('🤖 AI Summary:', this.CONTEXT);
+    log.output('', this.CONTEXT);
+
+    // Split the AI summary into paragraphs and format nicely
+    const paragraphs = aiSummary
+      .trim()
+      .split(/\n\s*\n/)
+      .filter(p => p.trim());
+
+    for (const paragraph of paragraphs) {
+      // Wrap text at reasonable line length for better readability
+      const lines = this.wrapText(paragraph.trim(), 80);
+      lines.forEach(line => log.output(`  ${line}`, this.CONTEXT));
+      log.output('', this.CONTEXT);
+    }
+  }
+
+  private static wrapText(text: string, maxWidth: number): string[] {
+    if (text.length <= maxWidth) {
+      return [text];
+    }
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      if (currentLine.length + word.length + 1 <= maxWidth) {
+        currentLine += (currentLine ? ' ' : '') + word;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+        }
+        currentLine = word;
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  }
 }
 
 /**
@@ -404,6 +449,12 @@ export function printTextSummary(
   verbose = false
 ): void {
   SummaryFormatter.formatHeader(summary);
+
+  // Display AI summary prominently if available
+  if (summary.aiSummary) {
+    SummaryFormatter.formatAISummary(summary.aiSummary);
+  }
+
   SummaryFormatter.formatOverallStats(summary);
 
   if (summary.commits && summary.commits.length > 0) {

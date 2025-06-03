@@ -14,7 +14,7 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Check if the project is built
-if [ ! -f "$SCRIPT_DIR/dist/cli/index.js" ]; then
+if [ ! -f "$SCRIPT_DIR/dist/src/cli/index.js" ]; then
     echo "📦 Building the project..."
     cd "$SCRIPT_DIR"
     
@@ -35,4 +35,4 @@ if [ ! -f "$SCRIPT_DIR/dist/cli/index.js" ]; then
 fi
 
 # Run the CLI tool with all passed arguments
-node "$SCRIPT_DIR/dist/cli/index.js" "$@" 
+node "$SCRIPT_DIR/dist/src/cli/index.js" "$@" 

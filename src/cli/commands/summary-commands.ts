@@ -2,10 +2,100 @@ import { Command } from 'commander';
 import { DataAggregator } from '../../core/data-aggregator';
 import { formatSummary, OutputFormat } from '../../formatters';
 import { formatRepositoryDetail } from '../../formatters/repository-detail-formatter';
-import { PeriodType } from '../../types';
+import { NarrativeStyle, PeriodType, SummaryContext } from '../../types';
 import { DateUtils } from '../../utils/date-utils';
 import { GitUtils } from '../../utils/git-utils';
 import { log } from '../../utils/logger';
+
+/**
+ * Validate AI context parameter
+ */
+function validateContext(context: string): SummaryContext {
+  const validContexts: SummaryContext[] = [
+    'standup',
+    'retrospective',
+    'performance-review',
+    'general',
+  ];
+  if (!validContexts.includes(context as SummaryContext)) {
+    log.error(
+      `Invalid context '${context}'. Valid options: ${validContexts.join(', ')}`,
+      undefined,
+      'cli'
+    );
+    process.exit(1);
+  }
+  return context as SummaryContext;
+}
+
+/**
+ * Validate AI style parameter
+ */
+function validateStyle(style: string): NarrativeStyle {
+  const validStyles: NarrativeStyle[] = [
+    'professional',
+    'casual',
+    'detailed',
+    'concise',
+  ];
+  if (!validStyles.includes(style as NarrativeStyle)) {
+    log.error(
+      `Invalid style '${style}'. Valid options: ${validStyles.join(', ')}`,
+      undefined,
+      'cli'
+    );
+    process.exit(1);
+  }
+  return style as NarrativeStyle;
+}
+
+/**
+ * Generate summary with optional AI enhancement
+ */
+async function generateSummaryWithOptionalAI(
+  dataAggregator: DataAggregator,
+  timePeriod: any,
+  repos: string[] | undefined,
+  author: string | undefined,
+  aiSummary: boolean,
+  context: string,
+  style: string,
+  verbose: boolean
+) {
+  if (aiSummary) {
+    // Check if AI is available
+    if (!dataAggregator.isAIAvailable()) {
+      log.warn(
+        '🤖 AI service not available. Please check your OpenAI API key configuration.',
+        'cli'
+      );
+      log.info('💡 Falling back to standard summary...', 'cli');
+    } else {
+      if (verbose) {
+        log.info(
+          `🤖 Generating AI-powered summary (context: ${context}, style: ${style})...`,
+          'cli'
+        );
+      }
+
+      const validatedContext = validateContext(context);
+      const validatedStyle = validateStyle(style);
+
+      return await dataAggregator.generateWorkSummaryWithAI(
+        timePeriod,
+        repos,
+        author,
+        {
+          context: validatedContext,
+          style: validatedStyle,
+        }
+      );
+    }
+  }
+
+  // Generate standard summary
+  return await dataAggregator.generateWorkSummary(timePeriod, repos, author);
+}
 
 /**
  * Add summary commands to the CLI program
@@ -34,6 +124,17 @@ export function addSummaryCommands(
       )
       .option('-a, --author <author>', 'Filter commits by author name or email')
       .option('--me', 'Filter commits by current git user')
+      .option('--ai-summary', 'Generate AI-powered summary')
+      .option(
+        '--context <context>',
+        'AI summary context (standup, retrospective, performance-review, general)',
+        'general'
+      )
+      .option(
+        '--style <style>',
+        'AI narrative style (professional, casual, detailed, concise)',
+        'professional'
+      )
       .option('-v, --verbose', 'Verbose output')
       .action(async options => {
         try {
@@ -63,10 +164,15 @@ export function addSummaryCommands(
           }
 
           const timePeriod = DateUtils.getPeriod(period);
-          const summary = await dataAggregator.generateWorkSummary(
+          const summary = await generateSummaryWithOptionalAI(
+            dataAggregator,
             timePeriod,
             options.repos,
-            author
+            author,
+            options.aiSummary,
+            options.context,
+            options.style,
+            options.verbose
           );
 
           formatSummary(
@@ -94,6 +200,17 @@ export function addSummaryCommands(
     )
     .option('-a, --author <author>', 'Filter commits by author name or email')
     .option('--me', 'Filter commits by current git user')
+    .option('--ai-summary', 'Generate AI-powered summary')
+    .option(
+      '--context <context>',
+      'AI summary context (standup, retrospective, performance-review, general)',
+      'general'
+    )
+    .option(
+      '--style <style>',
+      'AI narrative style (professional, casual, detailed, concise)',
+      'professional'
+    )
     .option('-v, --verbose', 'Verbose output')
     .action(async (count: string, options) => {
       try {
@@ -140,10 +257,15 @@ export function addSummaryCommands(
         // Override the label to reflect the actual period
         timePeriod.label = `Last ${monthCount} Month${monthCount === 1 ? '' : 's'}`;
 
-        const summary = await dataAggregator.generateWorkSummary(
+        const summary = await generateSummaryWithOptionalAI(
+          dataAggregator,
           timePeriod,
           options.repos,
-          author
+          author,
+          options.aiSummary,
+          options.context,
+          options.style,
+          options.verbose
         );
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);
@@ -167,6 +289,17 @@ export function addSummaryCommands(
     )
     .option('-a, --author <author>', 'Filter commits by author name or email')
     .option('--me', 'Filter commits by current git user')
+    .option('--ai-summary', 'Generate AI-powered summary')
+    .option(
+      '--context <context>',
+      'AI summary context (standup, retrospective, performance-review, general)',
+      'general'
+    )
+    .option(
+      '--style <style>',
+      'AI narrative style (professional, casual, detailed, concise)',
+      'professional'
+    )
     .option('-v, --verbose', 'Verbose output')
     .action(async options => {
       try {
@@ -213,10 +346,15 @@ export function addSummaryCommands(
         }
 
         const timePeriod = DateUtils.getPeriod('1week', startDate, endDate);
-        const summary = await dataAggregator.generateWorkSummary(
+        const summary = await generateSummaryWithOptionalAI(
+          dataAggregator,
           timePeriod,
           options.repos,
-          author
+          author,
+          options.aiSummary,
+          options.context,
+          options.style,
+          options.verbose
         );
 
         formatSummary(summary, options.format as OutputFormat, options.verbose);
@@ -244,6 +382,17 @@ export function addSummaryCommands(
       '-f, --format <format>',
       'Output format (text, json, markdown)',
       'text'
+    )
+    .option('--ai-summary', 'Generate AI-powered summary')
+    .option(
+      '--context <context>',
+      'AI summary context (standup, retrospective, performance-review, general)',
+      'general'
+    )
+    .option(
+      '--style <style>',
+      'AI narrative style (professional, casual, detailed, concise)',
+      'professional'
     )
     .option('-v, --verbose', 'Verbose output')
     .action(async options => {
@@ -296,10 +445,15 @@ export function addSummaryCommands(
         }
 
         // Generate summary for the specific repository
-        const summary = await dataAggregator.generateWorkSummary(
+        const summary = await generateSummaryWithOptionalAI(
+          dataAggregator,
           timePeriod,
           [options.repo],
-          author
+          author,
+          options.aiSummary,
+          options.context,
+          options.style,
+          options.verbose
         );
 
         // Format and display the detailed repository analysis
@@ -310,6 +464,65 @@ export function addSummaryCommands(
         );
       } catch (error) {
         log.error('Error analyzing repository', error as Error, 'cli');
+        process.exit(1);
+      }
+    });
+
+  // AI status command
+  program
+    .command('ai-status')
+    .description('Check AI service availability and configuration')
+    .option('-v, --verbose', 'Show detailed configuration info')
+    .action(async options => {
+      try {
+        const isAvailable = dataAggregator.isAIAvailable();
+
+        if (isAvailable) {
+          log.info('✅ AI service is available and configured', 'cli');
+
+          if (options.verbose) {
+            log.info('🤖 Available AI features:', 'cli');
+            log.info('  • --ai-summary: Generate intelligent summaries', 'cli');
+            log.info(
+              '  • --context: standup, retrospective, performance-review, general',
+              'cli'
+            );
+            log.info(
+              '  • --style: professional, casual, detailed, concise',
+              'cli'
+            );
+            log.info('', 'cli');
+            log.info('💡 Example usage:', 'cli');
+            log.info(
+              '  git-summary week --ai-summary --context standup --style concise',
+              'cli'
+            );
+            log.info(
+              '  git-summary month --ai-summary --context performance-review --style detailed',
+              'cli'
+            );
+          }
+        } else {
+          log.warn('❌ AI service is not available', 'cli');
+          log.info('', 'cli');
+          log.info('🔧 To enable AI features:', 'cli');
+          log.info('  1. Create a .env file in your project root', 'cli');
+          log.info(
+            '  2. Add your OpenAI API key: OPENAI_API_KEY=your_key_here',
+            'cli'
+          );
+          log.info(
+            '  3. Optionally configure: OPENAI_MODEL=gpt-4 (default: gpt-3.5-turbo)',
+            'cli'
+          );
+          log.info('', 'cli');
+          log.info(
+            '📖 Get your API key at: https://platform.openai.com/api-keys',
+            'cli'
+          );
+        }
+      } catch (error) {
+        log.error('Error checking AI status', error as Error, 'cli');
         process.exit(1);
       }
     });

@@ -1,6 +1,6 @@
+import { ComprehensiveWorkSummary } from '../core/analytics-engine';
 import { DateUtils } from '../utils/date-utils';
 import { log } from '../utils/logger';
-import { ComprehensiveWorkSummary } from '../core/analytics-engine';
 
 /**
  * Print markdown-formatted summary to console
@@ -19,6 +19,21 @@ export function printMarkdownSummary(summary: ComprehensiveWorkSummary) {
     `**Repositories:** ${summary.repositories.length}\n`,
     'markdown-formatter'
   );
+
+  // Display AI summary prominently if available
+  if (summary.aiSummary) {
+    log.output('## 🤖 AI Summary\n', 'markdown-formatter');
+
+    // Split the AI summary into paragraphs and format as markdown
+    const paragraphs = summary.aiSummary
+      .trim()
+      .split(/\n\s*\n/)
+      .filter(p => p.trim());
+
+    for (const paragraph of paragraphs) {
+      log.output(paragraph.trim() + '\n', 'markdown-formatter');
+    }
+  }
 
   log.output('## 📈 Overall Statistics\n', 'markdown-formatter');
   log.output(
